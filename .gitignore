@@ -30,3 +30,4 @@ Pods/
 *.log
 .claude/
 .DS_Store
+apps/mobile/dist/
