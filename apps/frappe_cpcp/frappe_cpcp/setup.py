@@ -103,7 +103,7 @@ def seed_demo(profile: str = "a") -> dict:
 
     users = {
         "admin": ("org_admin", None, None), "secmgr": ("security_manager", est1, None), "officer": ("security_officer", est1, None),
-        "resident": ("resident", est1, unit1), "auditor": ("auditor", None, None), "finance": ("finance", None, None),
+        "resident": ("resident", est1, unit1), "auditor": ("auditor", est1, None), "finance": ("finance", est1, None),
     }
     for key, (role, estate, unit) in users.items():
         email = f"{key}@{dom}"
