@@ -1,0 +1,231 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "estate",
+  "host_unit",
+  "host_unit_label",
+  "category",
+  "plate_snapshot",
+  "plate_normalized",
+  "status",
+  "presence",
+  "entry_at",
+  "entry_gate",
+  "entry_officer",
+  "exit_at",
+  "exit_gate",
+  "exit_officer",
+  "exit_method",
+  "estimated",
+  "duration_minutes",
+  "sync_state",
+  "client_uuid",
+  "version"
+ ],
+ "fields": [
+  {
+   "fieldname": "estate",
+   "fieldtype": "Link",
+   "label": "Estate",
+   "options": "CPCP Estate",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "host_unit",
+   "fieldtype": "Link",
+   "label": "Host Unit",
+   "options": "CPCP Unit",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "host_unit_label",
+   "fieldtype": "Data",
+   "label": "Host Unit Label",
+   "read_only": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "Guest\nContractor\nDelivery\nRide-hail or Taxi\nMotorcycle\nPedestrian\nEmergency Service",
+   "default": "Guest"
+  },
+  {
+   "fieldname": "plate_snapshot",
+   "fieldtype": "Data",
+   "label": "Plate Snapshot",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "plate_normalized",
+   "fieldtype": "Data",
+   "label": "Plate Normalized",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Expected\nPending Authorization\nChecked In\nChecked Out\nExit Unconfirmed\nNeeds Supervisor Review\nCancelled/Voided",
+   "default": "Checked In",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "presence",
+   "fieldtype": "Select",
+   "label": "Presence",
+   "options": "Confirmed In\nConfirmed Out\nUnknown/Unverified",
+   "default": "Confirmed In"
+  },
+  {
+   "fieldname": "entry_at",
+   "fieldtype": "Datetime",
+   "label": "Entry At",
+   "reqd": 1,
+   "description": "UTC observed time"
+  },
+  {
+   "fieldname": "entry_gate",
+   "fieldtype": "Link",
+   "label": "Entry Gate",
+   "options": "CPCP Gate"
+  },
+  {
+   "fieldname": "entry_officer",
+   "fieldtype": "Link",
+   "label": "Entry Officer",
+   "options": "User"
+  },
+  {
+   "fieldname": "exit_at",
+   "fieldtype": "Datetime",
+   "label": "Exit At"
+  },
+  {
+   "fieldname": "exit_gate",
+   "fieldtype": "Link",
+   "label": "Exit Gate",
+   "options": "CPCP Gate"
+  },
+  {
+   "fieldname": "exit_officer",
+   "fieldtype": "Link",
+   "label": "Exit Officer",
+   "options": "User"
+  },
+  {
+   "fieldname": "exit_method",
+   "fieldtype": "Data",
+   "label": "Exit Method"
+  },
+  {
+   "fieldname": "estimated",
+   "fieldtype": "Check",
+   "label": "Estimated"
+  },
+  {
+   "fieldname": "duration_minutes",
+   "fieldtype": "Int",
+   "label": "Duration Minutes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_state",
+   "fieldtype": "Select",
+   "label": "Sync State",
+   "options": "Synced\nAwaiting Sync\nNeeds Review",
+   "default": "Synced"
+  },
+  {
+   "fieldname": "client_uuid",
+   "fieldtype": "Data",
+   "label": "Client Uuid",
+   "unique": 1,
+   "description": "Client-generated idempotency key"
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Visitor Session",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Officer",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Auditor",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "",
+ "naming_rule": "Random",
+ "title_field": "plate_snapshot"
+}

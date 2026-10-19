@@ -1,0 +1,98 @@
+{
+ "CPCP Access Grant": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Allegation Receipt": {
+  "append_only": true,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Allegation Review Event": {
+  "append_only": true,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
+ "CPCP Audit Event": {
+  "append_only": true,
+  "sensitivity": "IMMUTABLE_AUDIT"
+ },
+ "CPCP Estate": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Gate": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Incident Allegation Link": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Notification Outbox": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Officer Evidence": {
+  "append_only": true,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
+ "CPCP Parking Allegation": {
+  "append_only": false,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
+ "CPCP Person": {
+  "append_only": false,
+  "sensitivity": "SENSITIVE_RESIDENT_REGISTRY"
+ },
+ "CPCP Policy Version": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Role Assignment": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Security Work Item": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Sensitive Access Event": {
+  "append_only": true,
+  "sensitivity": "IMMUTABLE_AUDIT"
+ },
+ "CPCP Settings": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Unit": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Unit Membership": {
+  "append_only": false,
+  "sensitivity": "SENSITIVE_RESIDENT_REGISTRY"
+ },
+ "CPCP Vehicle": {
+  "append_only": false,
+  "sensitivity": "SENSITIVE_RESIDENT_REGISTRY"
+ },
+ "CPCP Vehicle Unit Association": {
+  "append_only": false,
+  "sensitivity": "SENSITIVE_RESIDENT_REGISTRY"
+ },
+ "CPCP Violation Incident": {
+  "append_only": false,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
+ "CPCP Visit Event": {
+  "append_only": true,
+  "sensitivity": "SENSITIVE_VISITOR_LOG"
+ },
+ "CPCP Visitor Session": {
+  "append_only": false,
+  "sensitivity": "SENSITIVE_VISITOR_LOG"
+ },
+ "CPCP Zone": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ }
+}

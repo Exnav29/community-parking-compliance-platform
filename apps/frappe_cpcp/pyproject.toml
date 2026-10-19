@@ -1,0 +1,23 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "frappe_cpcp"
+description = "Community Parking & Compliance Platform (CPCP): multi-organization parking, access and compliance management on Frappe."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "CPCP Project Authors" }]
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+dynamic = ["version"]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0,<16.0.0"
+
+[tool.pytest.ini_options]
+testpaths = ["frappe_cpcp/core/tests"]

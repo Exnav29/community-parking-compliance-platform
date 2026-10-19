@@ -1,0 +1,188 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "org_id",
+  "display_name",
+  "locale",
+  "currency",
+  "timezone",
+  "default_grace_minutes",
+  "visitor_suggestion_retention_days",
+  "allegation_rate_limit_per_hour",
+  "anonymous_label_verified",
+  "sb_flags",
+  "legal_approval_reference",
+  "fine_assessment_enabled",
+  "clamping_enabled",
+  "towing_enabled",
+  "impound_release_enabled",
+  "payment_collection_enabled",
+  "provider_dispatch_enabled",
+  "public_registration_enabled",
+  "saas_customer_billing_enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "org_id",
+   "fieldtype": "Data",
+   "label": "Org Id",
+   "reqd": 1,
+   "description": "Opaque organization identifier bound to this isolated site."
+  },
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "label": "Display Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "locale",
+   "fieldtype": "Data",
+   "label": "Locale",
+   "default": "en-GH"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Data",
+   "label": "Currency",
+   "default": "GHS"
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Timezone",
+   "default": "Africa/Accra"
+  },
+  {
+   "fieldname": "default_grace_minutes",
+   "fieldtype": "Int",
+   "label": "Default Grace Minutes",
+   "default": "15"
+  },
+  {
+   "fieldname": "visitor_suggestion_retention_days",
+   "fieldtype": "Int",
+   "label": "Visitor Suggestion Retention Days",
+   "default": "180",
+   "description": "Prior-visit suggestions older than this are never offered."
+  },
+  {
+   "fieldname": "allegation_rate_limit_per_hour",
+   "fieldtype": "Int",
+   "label": "Allegation Rate Limit Per Hour",
+   "default": "10"
+  },
+  {
+   "fieldname": "anonymous_label_verified",
+   "fieldtype": "Check",
+   "label": "Anonymous Label Verified",
+   "default": "0",
+   "description": "Only set after logging/linkability review (PRD 34.1). While 0 the UI says 'Confidential', not 'Anonymous'."
+  },
+  {
+   "fieldname": "sb_flags",
+   "fieldtype": "Section Break",
+   "label": "Legal and policy gates"
+  },
+  {
+   "fieldname": "legal_approval_reference",
+   "fieldtype": "Data",
+   "label": "Legal Approval Reference",
+   "description": "Reference to signed association approval and local legal review. Required to enable any gate."
+  },
+  {
+   "fieldname": "fine_assessment_enabled",
+   "fieldtype": "Check",
+   "label": "Fine Assessment Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "clamping_enabled",
+   "fieldtype": "Check",
+   "label": "Clamping Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "towing_enabled",
+   "fieldtype": "Check",
+   "label": "Towing Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "impound_release_enabled",
+   "fieldtype": "Check",
+   "label": "Impound Release Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "payment_collection_enabled",
+   "fieldtype": "Check",
+   "label": "Payment Collection Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "provider_dispatch_enabled",
+   "fieldtype": "Check",
+   "label": "Provider Dispatch Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "public_registration_enabled",
+   "fieldtype": "Check",
+   "label": "Public Registration Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "saas_customer_billing_enabled",
+   "fieldtype": "Check",
+   "label": "Saas Customer Billing Enabled",
+   "default": "0"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "Organization settings, locale and legal feature gates (all enforcement flags default OFF)."
+}

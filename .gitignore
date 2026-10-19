@@ -1,0 +1,32 @@
+# Secrets and runtime data: never commit
+.env
+.env.*
+!.env.example
+site_config.json
+common_site_config.json
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+*.sql
+*.sql.gz
+*.tar.gz
+backups/
+private/
+sites/
+# Tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+node_modules/
+dist/
+build/
+.gradle/
+Pods/
+*.log
+.claude/
+.DS_Store

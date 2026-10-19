@@ -1,0 +1,245 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "estate",
+  "mode",
+  "category",
+  "narrative",
+  "alleged_plate_text",
+  "latitude",
+  "longitude",
+  "accuracy_m",
+  "location_source",
+  "zone",
+  "urgent_claim",
+  "state",
+  "dedup_cluster",
+  "alleged_plate_hash",
+  "receipt_id",
+  "client_uuid",
+  "submitted_at",
+  "sb_reporter",
+  "reporter_user",
+  "reporter_unit"
+ ],
+ "fields": [
+  {
+   "fieldname": "estate",
+   "fieldtype": "Link",
+   "label": "Estate",
+   "options": "CPCP Estate",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mode",
+   "fieldtype": "Select",
+   "label": "Mode",
+   "options": "Identified\nAnonymous\nContactable Confidential",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "Gate or driveway blocked\nRoadway obstruction\nUnsafe parking\nUnauthorized space\nEmergency access\nOther",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "narrative",
+   "fieldtype": "Small Text",
+   "label": "Narrative",
+   "reqd": 1
+  },
+  {
+   "fieldname": "alleged_plate_text",
+   "fieldtype": "Data",
+   "label": "Alleged Plate Text",
+   "description": "Typed manually by reporter; never matched to a registry."
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "precision": "8"
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "precision": "8"
+  },
+  {
+   "fieldname": "accuracy_m",
+   "fieldtype": "Float",
+   "label": "Accuracy M"
+  },
+  {
+   "fieldname": "location_source",
+   "fieldtype": "Select",
+   "label": "Location Source",
+   "options": "device\nmanual_pin\nzone_only\nnone",
+   "default": "none"
+  },
+  {
+   "fieldname": "zone",
+   "fieldtype": "Link",
+   "label": "Zone",
+   "options": "CPCP Zone"
+  },
+  {
+   "fieldname": "urgent_claim",
+   "fieldtype": "Check",
+   "label": "Urgent Claim"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Select",
+   "label": "State",
+   "options": "Submitted\nReceived by Security\nAssigned / Under Review\nVerified and Linked to Official Incident\nResolved without Violation\nNot Substantiated\nDuplicate / Merged\nWithdrawn\nClosed",
+   "default": "Submitted",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dedup_cluster",
+   "fieldtype": "Data",
+   "label": "Dedup Cluster",
+   "search_index": 1
+  },
+  {
+   "fieldname": "alleged_plate_hash",
+   "fieldtype": "Data",
+   "label": "Alleged Plate Hash",
+   "hidden": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "receipt_id",
+   "fieldtype": "Data",
+   "label": "Receipt Id",
+   "search_index": 1
+  },
+  {
+   "fieldname": "client_uuid",
+   "fieldtype": "Data",
+   "label": "Client Uuid",
+   "unique": 1
+  },
+  {
+   "fieldname": "submitted_at",
+   "fieldtype": "Datetime",
+   "label": "Submitted At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_reporter",
+   "fieldtype": "Section Break",
+   "label": "Restricted reporter metadata (identified reports only)"
+  },
+  {
+   "fieldname": "reporter_user",
+   "fieldtype": "Link",
+   "label": "Reporter User",
+   "options": "User",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "reporter_unit",
+   "fieldtype": "Link",
+   "label": "Reporter Unit",
+   "options": "CPCP Unit",
+   "permlevel": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Parking Allegation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Officer",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Auditor",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "",
+ "autoname": "format:ALG-{#####}",
+ "naming_rule": "Expression (old style)",
+ "title_field": "category"
+}

@@ -1,0 +1,45 @@
+# Local development stack for CPCP. Synthetic data only. Never use for production.
+# Credentials below are throwaway development placeholders overridable via env.
+name: cpcp-dev
+services:
+  mariadb:
+    image: mariadb:10.6
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+    environment:
+      MARIADB_ROOT_PASSWORD: ${CPCP_DEV_DB_ROOT_PASSWORD:-dev-only-change-me}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+  bench:
+    image: frappe/bench:latest
+    command: sleep infinity
+    working_dir: /home/frappe
+    depends_on:
+      mariadb: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    environment:
+      CPCP_DEV_DB_ROOT_PASSWORD: ${CPCP_DEV_DB_ROOT_PASSWORD:-dev-only-change-me}
+      CPCP_DEV_ADMIN_PASSWORD: ${CPCP_DEV_ADMIN_PASSWORD:-dev-admin-change-me}
+      FRAPPE_REF: ${FRAPPE_REF:-v15.123.1}
+    volumes:
+      - bench-data:/home/frappe/bench-data
+      - ../../:/workspace
+    ports:
+      - "127.0.0.1:8000:8000"
+volumes:
+  mariadb-data:
+  bench-data:
