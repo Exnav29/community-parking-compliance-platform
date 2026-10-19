@@ -1,5 +1,31 @@
 # Status (verified results, blockers, next steps)
-Updated 2026-10-19.
+Updated 2026-10-19 (second session).
+
+## Test results (last full run, this date)
+| Suite | Result |
+|---|---|
+| Core unit tests (pytest, no Frappe) | **73 passed** |
+| Frappe integration on org-a (3 modules: integration 22, comms/enforcement 14, reports 6) | **42 passed** |
+| Cross-tenant HTTP isolation (2 sites) | **8 passed** |
+| Mobile (vitest) + `tsc -b` + production build | **9 passed**, typecheck clean, build OK |
+
+## Feature status
+| Area | State |
+|---|---|
+| Copyright owner confirmed (Johnathan Lightfoot), NOTICE updated | Implemented |
+| Contact resolution, dialer outcome capture, server SMS (mock adapter), HMAC callbacks, notice clock | Implemented and verified (integration tests) |
+| Enforcement actions, itemized charges (one penalty/incident), appeals, release never gated | Implemented and verified; **all legal gates OFF**, no live adapters |
+| Dashboards, hotspot layers (verified vs unverified), thresholded resident summary | Implemented and verified (API) |
+| Officer evidence photos (validated, server-hashed, private) | Implemented and verified |
+| Mobile app screens (gate, triage, verify with map pin, case/contact, resident) | **Implemented, awaiting physical-device validation** (see docs/ANDROID_TESTING.md) |
+| PRD v1.7 incident de-duplication / repeat-offender addendum | **BLOCKED: addendum text was not attached** (see below). Interim behavior: 4-hour same-plate clustering only. |
+| Desktop management console | Not started |
+| Backup/restore proof, SBOM/license CI, threat model & matrices docs, store-compliance matrix | Not started |
+| Provider-mediated voice, real SMS provider | Blocked: provider/authorization decision |
+
+## Blocker: PRD v1.7 addendum
+The requested file was not in the message, `D:\Projects\CPCP`, `Downloads` or `D:\Projects`. Only PRD v1.6 exists. Acceptance tests are not fabricated; once the addendum is supplied it will be merged into `docs/spec/PRD_v1.7.md` and its 18 tests implemented before any live financial/enforcement work.
+
 
 ## Verified
 - `apps/frappe_cpcp` core unit tests: **64 passed** (`python -m pytest`, local Python 3.11).
