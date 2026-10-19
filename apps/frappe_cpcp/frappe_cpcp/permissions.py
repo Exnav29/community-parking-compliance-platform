@@ -28,6 +28,9 @@ DOCTYPE_CAPABILITY = {
     "CPCP Allegation Review Event": "triage_reports", "CPCP Notification Outbox": "triage_reports",
     "CPCP Violation Incident": "incident_reports", "CPCP Officer Evidence": "capture_evidence",
     "CPCP Audit Event": "audit_history", "CPCP Sensitive Access Event": "audit_history",
+    "CPCP Communication Attempt": "contact_responsible", "CPCP Communication Event": "contact_responsible",
+    "CPCP Warning Notice": "issue_warning", "CPCP Enforcement Action": "execute_enforcement",
+    "CPCP Incident Charge": "charge_ledger", "CPCP Appeal": "submit_appeal",
     "CPCP Policy Version": "change_policy", "CPCP Role Assignment": "manage_users", "CPCP Access Grant": "manage_users",
 }
 # Doctypes that hold an `estate` link and can be filtered directly in SQL.
@@ -36,6 +39,9 @@ ESTATE_FIELD = {
     "CPCP Visitor Session": "estate", "CPCP Parking Allegation": "estate", "CPCP Security Work Item": "estate",
     "CPCP Violation Incident": "estate", "CPCP Policy Version": "estate", "CPCP Role Assignment": "estate",
 }
+# Child-of-incident doctypes are scoped through their incident's estate.
+_VIA_INCIDENT = {"CPCP Communication Attempt": "incident", "CPCP Warning Notice": "incident", "CPCP Enforcement Action": "incident",
+                 "CPCP Incident Charge": "incident", "CPCP Appeal": "incident"}
 PTYPE_LETTER = {"read": "R", "select": "R", "report": "R", "print": "R", "write": "U", "create": "C",
                 "submit": "A", "cancel": "A"}
 # delete, export, email, share and import are never granted through DocPerm hooks.
@@ -122,6 +128,8 @@ def _resource_for(doc, capability: str) -> Resource:
     estate = doc.get("estate") if doc.meta.has_field("estate") else None
     if doc.doctype == "CPCP Estate":
         estate = doc.name
+    if estate is None and doc.get("incident"):
+        estate = frappe.db.get_value("CPCP Violation Incident", doc.get("incident"), "estate")
     unit = doc.get("host_unit") or doc.get("unit") or doc.get("reporter_unit")
     owner = doc.get("reporter_user") or doc.get("user") or doc.get("requested_by")
     assigned = doc.get("claimed_by") or doc.get("verified_by")
@@ -187,6 +195,9 @@ def _estate_sql(actor: Actor, doctype: str) -> str:
     if doctype == "CPCP Person":
         return ("`tabCPCP Person`.name in (select m.person from `tabCPCP Unit Membership` m join `tabCPCP Unit` u "
                 f"on u.name = m.unit where u.estate in ({quoted}))")
+    if doctype in _VIA_INCIDENT:
+        col = _VIA_INCIDENT[doctype]
+        return f"`tab{doctype}`.{col} in (select name from `tabCPCP Violation Incident` where estate in ({quoted}))"
     if doctype == "CPCP Visit Event":
         return f"`tabCPCP Visit Event`.session in (select name from `tabCPCP Visitor Session` where estate in ({quoted}))"
     if doctype in ("CPCP Allegation Review Event", "CPCP Officer Evidence"):

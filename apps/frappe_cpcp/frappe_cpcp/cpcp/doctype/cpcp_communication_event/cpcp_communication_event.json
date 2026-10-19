@@ -1,0 +1,110 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "attempt",
+  "event_type",
+  "provider_ts",
+  "ingested_at",
+  "idempotency_key",
+  "signature_valid"
+ ],
+ "fields": [
+  {
+   "fieldname": "attempt",
+   "fieldtype": "Link",
+   "label": "Attempt",
+   "options": "CPCP Communication Attempt",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Data",
+   "label": "Event Type",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "provider_ts",
+   "fieldtype": "Data",
+   "label": "Provider Ts"
+  },
+  {
+   "fieldname": "ingested_at",
+   "fieldtype": "Datetime",
+   "label": "Ingested At"
+  },
+  {
+   "fieldname": "idempotency_key",
+   "fieldtype": "Data",
+   "label": "Idempotency Key",
+   "unique": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "signature_valid",
+   "fieldtype": "Check",
+   "label": "Signature Valid"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Communication Event",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Auditor",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "description": "",
+ "naming_rule": "Random"
+}

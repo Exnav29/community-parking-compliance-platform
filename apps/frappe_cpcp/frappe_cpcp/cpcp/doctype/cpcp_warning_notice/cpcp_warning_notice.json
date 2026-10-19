@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "incident",
+  "policy_version",
+  "notice_method",
+  "proof_basis",
+  "effective_at",
+  "grace_minutes",
+  "deadline",
+  "attempt",
+  "established_by",
+  "override_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "incident",
+   "fieldtype": "Link",
+   "label": "Incident",
+   "options": "CPCP Violation Incident",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "policy_version",
+   "fieldtype": "Data",
+   "label": "Policy Version",
+   "reqd": 1
+  },
+  {
+   "fieldname": "notice_method",
+   "fieldtype": "Data",
+   "label": "Notice Method"
+  },
+  {
+   "fieldname": "proof_basis",
+   "fieldtype": "Data",
+   "label": "Proof Basis",
+   "reqd": 1
+  },
+  {
+   "fieldname": "effective_at",
+   "fieldtype": "Datetime",
+   "label": "Effective At",
+   "reqd": 1
+  },
+  {
+   "fieldname": "grace_minutes",
+   "fieldtype": "Int",
+   "label": "Grace Minutes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "deadline",
+   "fieldtype": "Datetime",
+   "label": "Deadline",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attempt",
+   "fieldtype": "Link",
+   "label": "Attempt",
+   "options": "CPCP Communication Attempt"
+  },
+  {
+   "fieldname": "established_by",
+   "fieldtype": "Link",
+   "label": "Established By",
+   "options": "User"
+  },
+  {
+   "fieldname": "override_reason",
+   "fieldtype": "Small Text",
+   "label": "Override Reason"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Warning Notice",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Officer",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Auditor",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "description": "",
+ "autoname": "format:WN-{#####}",
+ "naming_rule": "Expression (old style)"
+}

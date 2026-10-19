@@ -38,9 +38,10 @@ def configure_org(org_id: str, display_name: str, currency: str = "GHS", timezon
     s.org_id, s.display_name, s.currency, s.timezone = org_id, display_name, currency, timezone_name
     s.flags.ignore_permissions = True
     s.save()
-    if not frappe.conf.get("cpcp_anon_signing_key"):
-        from frappe.installer import update_site_config
-        update_site_config("cpcp_anon_signing_key", secrets.token_hex(32))
+    from frappe.installer import update_site_config
+    for key in ("cpcp_anon_signing_key", "cpcp_sms_callback_secret"):  # per-tenant secrets, kept in the site's own config
+        if not frappe.conf.get(key):
+            update_site_config(key, secrets.token_hex(32))
     frappe.db.commit()
     return {"org_id": org_id, "gates_all_off": not any(
         s.get(f) for f in ("fine_assessment_enabled", "clamping_enabled", "towing_enabled", "payment_collection_enabled"))}
@@ -117,6 +118,16 @@ def seed_demo(profile: str = "a") -> dict:
     if not frappe.db.exists("CPCP Unit Membership", {"unit": unit1, "person": p}):
         frappe.get_doc({"doctype": "CPCP Unit Membership", "unit": unit1, "person": p, "membership_type": "Owner",
                         "is_primary_contact": 1, "valid_from": add_days(nowdate(), -365)}).insert(ignore_permissions=True)
+    q = frappe.db.get_value("CPCP Person", {"full_name": "Kofi Demo"}) or frappe.get_doc(
+        {"doctype": "CPCP Person", "full_name": "Kofi Demo", "phone_source": "0241230002"}).insert(ignore_permissions=True).name
+    if not frappe.db.exists("CPCP Unit Membership", {"unit": unit1, "person": q}):
+        frappe.get_doc({"doctype": "CPCP Unit Membership", "unit": unit1, "person": q, "membership_type": "Occupant",
+                        "is_backup_contact": 1, "valid_from": add_days(nowdate(), -365)}).insert(ignore_permissions=True)
+    s_ = frappe.get_single("CPCP Settings")
+    if not s_.security_desk_number:
+        s_.security_desk_number = "0240000000"
+        s_.flags.ignore_permissions = True
+        s_.save()
     for plate, make, color in (("ZZ 1001-26", "Toyota", "Silver"), ("ZZ 1002-26", "Honda", "Black")):
         veh = frappe.db.get_value("CPCP Vehicle", {"plate": plate}) or frappe.get_doc(
             {"doctype": "CPCP Vehicle", "plate": plate, "make": make, "color": color}).insert(ignore_permissions=True).name

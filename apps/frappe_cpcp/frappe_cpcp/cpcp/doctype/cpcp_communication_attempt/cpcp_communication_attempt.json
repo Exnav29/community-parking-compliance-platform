@@ -1,0 +1,235 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "incident",
+  "channel",
+  "contact_id",
+  "relationship",
+  "destination_masked",
+  "destination",
+  "officer",
+  "initiated_at",
+  "outcome",
+  "provenance",
+  "duration_seconds",
+  "duration_label",
+  "sms_status",
+  "acknowledged",
+  "warning_confirmed",
+  "message_text",
+  "template_version",
+  "provider",
+  "provider_ref",
+  "error",
+  "client_uuid",
+  "notice"
+ ],
+ "fields": [
+  {
+   "fieldname": "incident",
+   "fieldtype": "Link",
+   "label": "Incident",
+   "options": "CPCP Violation Incident",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "label": "Channel",
+   "options": "call_dialer\ncall_provider\nsms",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "contact_id",
+   "fieldtype": "Data",
+   "label": "Contact Id",
+   "description": "Unit Membership or role reference used for routing"
+  },
+  {
+   "fieldname": "relationship",
+   "fieldtype": "Data",
+   "label": "Relationship",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "destination_masked",
+   "fieldtype": "Data",
+   "label": "Destination Masked"
+  },
+  {
+   "fieldname": "destination",
+   "fieldtype": "Password",
+   "label": "Destination",
+   "description": "Encrypted full number; revealed only to authorized duty staff via API."
+  },
+  {
+   "fieldname": "officer",
+   "fieldtype": "Link",
+   "label": "Officer",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "initiated_at",
+   "fieldtype": "Datetime",
+   "label": "Initiated At",
+   "reqd": 1
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "label": "Outcome",
+   "options": "\nAnswered\nNo Answer\nBusy\nWrong Number\nCould Not Place Call\nCallback Requested\nOther"
+  },
+  {
+   "fieldname": "provenance",
+   "fieldtype": "Select",
+   "label": "Provenance",
+   "options": "requested-only\nofficer-reported\nverified-provider",
+   "default": "requested-only"
+  },
+  {
+   "fieldname": "duration_seconds",
+   "fieldtype": "Int",
+   "label": "Duration Seconds"
+  },
+  {
+   "fieldname": "duration_label",
+   "fieldtype": "Data",
+   "label": "Duration Label"
+  },
+  {
+   "fieldname": "sms_status",
+   "fieldtype": "Select",
+   "label": "Sms Status",
+   "options": "\nMessage Created\nQueued\nProvider Accepted\nSent\nDelivered\nFailed\nUnknown"
+  },
+  {
+   "fieldname": "acknowledged",
+   "fieldtype": "Check",
+   "label": "Acknowledged"
+  },
+  {
+   "fieldname": "warning_confirmed",
+   "fieldtype": "Check",
+   "label": "Warning Confirmed",
+   "description": "Officer confirmed the warning was delivered and understood"
+  },
+  {
+   "fieldname": "message_text",
+   "fieldtype": "Small Text",
+   "label": "Message Text",
+   "description": "Exact text sent (immutable once sent)"
+  },
+  {
+   "fieldname": "template_version",
+   "fieldtype": "Data",
+   "label": "Template Version"
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Data",
+   "label": "Provider"
+  },
+  {
+   "fieldname": "provider_ref",
+   "fieldtype": "Data",
+   "label": "Provider Ref",
+   "search_index": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error"
+  },
+  {
+   "fieldname": "client_uuid",
+   "fieldtype": "Data",
+   "label": "Client Uuid",
+   "unique": 1
+  },
+  {
+   "fieldname": "notice",
+   "fieldtype": "Link",
+   "label": "Notice",
+   "options": "CPCP Warning Notice"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Communication Attempt",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Security Officer",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Auditor",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "One call or SMS attempt for a verified incident. Destination is masked in ordinary views.",
+ "autoname": "format:COM-{#####}",
+ "naming_rule": "Expression (old style)"
+}

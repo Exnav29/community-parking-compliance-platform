@@ -13,6 +13,9 @@
   "default_grace_minutes",
   "visitor_suggestion_retention_days",
   "allegation_rate_limit_per_hour",
+  "sms_provider",
+  "sms_live_enabled",
+  "security_desk_number",
   "anonymous_label_verified",
   "sb_flags",
   "legal_approval_reference",
@@ -75,6 +78,27 @@
    "fieldtype": "Int",
    "label": "Allegation Rate Limit Per Hour",
    "default": "10"
+  },
+  {
+   "fieldname": "sms_provider",
+   "fieldtype": "Select",
+   "label": "Sms Provider",
+   "options": "mock",
+   "default": "mock",
+   "description": "Only the no-cost mock adapter exists until a real provider is approved."
+  },
+  {
+   "fieldname": "sms_live_enabled",
+   "fieldtype": "Check",
+   "label": "Sms Live Enabled",
+   "default": "0",
+   "description": "Billable production messaging. Needs separate authorization and a legal approval reference."
+  },
+  {
+   "fieldname": "security_desk_number",
+   "fieldtype": "Data",
+   "label": "Security Desk Number",
+   "description": "Shown in warning templates."
   },
   {
    "fieldname": "anonymous_label_verified",

@@ -17,7 +17,8 @@ _DOCTYPES = [
     "CPCP Visit Event", "CPCP Parking Allegation", "CPCP Allegation Receipt", "CPCP Security Work Item",
     "CPCP Notification Outbox", "CPCP Allegation Review Event", "CPCP Violation Incident",
     "CPCP Officer Evidence", "CPCP Audit Event", "CPCP Sensitive Access Event", "CPCP Policy Version",
-    "CPCP Access Grant",
+    "CPCP Access Grant", "CPCP Communication Attempt", "CPCP Communication Event", "CPCP Warning Notice",
+    "CPCP Enforcement Action", "CPCP Incident Charge", "CPCP Appeal",
 ]
 has_permission = {dt: "frappe_cpcp.permissions.has_permission" for dt in _DOCTYPES}
 permission_query_conditions = {dt: "frappe_cpcp.permissions.query_conditions" for dt in _DOCTYPES}

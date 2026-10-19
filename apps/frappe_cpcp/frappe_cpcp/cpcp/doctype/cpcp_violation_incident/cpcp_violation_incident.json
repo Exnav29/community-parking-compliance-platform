@@ -20,6 +20,8 @@
   "pin_source",
   "pin_correction_reason",
   "zone",
+  "responsible_unit",
+  "match_basis",
   "allegations"
  ],
  "fields": [
@@ -54,7 +56,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "recorded\nidentification_pending\ncontact_pending\nnotification_attempted\nnotified\ngrace_active\ncorrected_no_fee\nescalation_pending\nresolved_closed",
+   "options": "recorded\nidentification_pending\ncontact_pending\nnotification_attempted\nnotified\ngrace_active\ncorrected_no_fee\nescalation_pending\napproved\nclamped\ntow_dispatched\nimpounded\nreleased\nresolved_closed",
    "default": "recorded",
    "in_list_view": 1
   },
@@ -112,6 +114,17 @@
    "fieldtype": "Link",
    "label": "Zone",
    "options": "CPCP Zone"
+  },
+  {
+   "fieldname": "responsible_unit",
+   "fieldtype": "Link",
+   "label": "Responsible Unit",
+   "options": "CPCP Unit"
+  },
+  {
+   "fieldname": "match_basis",
+   "fieldtype": "Data",
+   "label": "Match Basis"
   },
   {
    "fieldname": "allegations",

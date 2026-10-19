@@ -11,9 +11,25 @@
   "append_only": true,
   "sensitivity": "RESTRICTED_EVIDENCE"
  },
+ "CPCP Appeal": {
+  "append_only": false,
+  "sensitivity": "FINANCIAL"
+ },
  "CPCP Audit Event": {
   "append_only": true,
   "sensitivity": "IMMUTABLE_AUDIT"
+ },
+ "CPCP Communication Attempt": {
+  "append_only": false,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
+ "CPCP Communication Event": {
+  "append_only": true,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
+ "CPCP Enforcement Action": {
+  "append_only": false,
+  "sensitivity": "RESTRICTED_EVIDENCE"
  },
  "CPCP Estate": {
   "append_only": false,
@@ -26,6 +42,10 @@
  "CPCP Incident Allegation Link": {
   "append_only": false,
   "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Incident Charge": {
+  "append_only": true,
+  "sensitivity": "FINANCIAL"
  },
  "CPCP Notification Outbox": {
   "append_only": false,
@@ -90,6 +110,10 @@
  "CPCP Visitor Session": {
   "append_only": false,
   "sensitivity": "SENSITIVE_VISITOR_LOG"
+ },
+ "CPCP Warning Notice": {
+  "append_only": true,
+  "sensitivity": "RESTRICTED_EVIDENCE"
  },
  "CPCP Zone": {
   "append_only": false,
