@@ -16,6 +16,14 @@ Thank you for helping. This project handles sensitive community data, so a few r
 Contributions are licensed under Apache-2.0 and you keep your own copyright; the DCO is a certification of your right to contribute, not a copyright assignment. Certify the [Developer Certificate of Origin](https://developercertificate.org/)
 by signing off every commit: `git commit -s`.
 
+## Community and pre-review checks
+
+Use [Discussions](https://github.com/Exnav29/community-parking-compliance-platform/discussions) for questions, ideas and proposed features; use [Issues](https://github.com/Exnav29/community-parking-compliance-platform/issues) for trackable bugs. Please check for similar conversations before opening a duplicate.
+
+Every PR is screened automatically for core tests, secrets, newly introduced vulnerable dependencies, suspicious tracked files and mobile lint. Mobile code changes also trigger the mobile build/test workflow; GitHub CodeQL performs static security analysis where supported. The maintainer still reviews every change and may request additional privacy, tenant-isolation and legal-safety tests. Please read the [PR Review Guide](docs/community/PULL_REQUEST_REVIEW.md).
+
+For first-time external contributors, GitHub may ask a maintainer to approve workflow execution before checks can start. Never paste secrets or real resident data into Actions logs, issues or PR comments.
+
 ## Workflow
 - Fork, branch, open a PR against `main`. Keep PRs focused; update docs and `CHANGELOG.md`.
 - Run before pushing: `cd apps/frappe_cpcp && python -m pytest` and `ruff check .`.
