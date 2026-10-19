@@ -1,14 +1,42 @@
 # Status (verified results, blockers, next steps)
 Updated 2026-10-19 (second session).
 
-## Test results (last full run, 2026-10-19, after the v1.7 changes)
+## Test results (last full run, 2026-10-19, after the v1.8 changes)
 | Suite | Result |
 |---|---|
-| Core unit tests (pytest, no Frappe) | **80 passed** |
-| Frappe integration on org-a: integration 22, comms/enforcement 14, reports 6, **dedup (AC-D01..D18 + variant) 19** | **61 passed** |
+| Core unit tests (pytest, no Frappe) | **88 passed** (includes the purpose rules in `core/pbac.py`) |
+| Frappe integration on org-a: integration 22, comms/enforcement 14, reports 6, dedup (AC-D01..D18) 19, **PBAC-01..20 + extras 22** | **83 passed** |
 | Cross-tenant HTTP isolation (two sites) | **8 passed** |
-| **Parallel HTTP concurrency** (`tests/concurrency`, 6 scenarios, barrier-aligned threads) | **6 passed; repeated 40 times in a row = 240 concurrent scenarios, 0 failures** |
-| Mobile (vitest) + `tsc -b` + production build | **9 passed**, typecheck clean, build OK |
+| **Privacy over HTTP** (`tests/privacy`: Desk/REST/search/print/export, forged purposes, journal visibility, cross-tenant journals, device revocation) | **16 passed** |
+| Parallel HTTP concurrency (6 scenarios; earlier repeated 40x = 240 runs with 0 failures) | **6 passed** |
+| Mobile (vitest) + `tsc -b` + production build | **12 passed**, typecheck clean, build OK |
+
+### PRD v1.8 acceptance tests (PBAC-01..PBAC-20)
+All 20 are implemented and **pass** (`apps/frappe_cpcp/frappe_cpcp/tests/test_pbac.py`; PBAC-04/05/12/14/15/19/20 also over real HTTP in `tests/privacy`; PBAC-18 also in the mobile unit tests).
+| PBAC | What is proven | Result |
+|---|---|---|
+| 01 | Unassigned/off-duty officer gets nothing and the denial is journaled; on-duty gate answers carry no names/numbers/history; bare unit lookups are rate-limited | pass |
+| 02 | Off-shift, ended and **expired** shifts are denied and journaled | pass |
+| 03 | Other estate, other gate, or a shift in another estate (officer assigned to both) is denied and journaled | pass |
+| 04 | Desk lists, forms, autocomplete and routes for Person, Membership, Vehicle, Association, Visitor Session, Visit Event are closed to officers (DocPerm + hooks + request guard) | pass |
+| 05 | Forged purpose, case id, gate id or unit never grant access | pass |
+| 06 | Unit-first returning-visitor check-in still works (unit + plate hint -> confirm), minimum fields only | pass |
+| 07 | An assigned case reveals only that case's masked contact actions; the number goes to the assignee only and is journaled | pass |
+| 08 | A claim or another case cannot be used to look up an unrelated plate or unit | pass |
+| 09 | Reassignment or closure revokes access immediately | pass |
+| 10 | Allowed, denied and no-match are all journaled with the required fields; the hash chain verifies | pass |
+| 11 | A denial survives exception + rollback; a journal outage **fails closed** | pass |
+| 12 | Browse / search / suggestion / evidence / report / export / print paths are guarded and audited, including direct Frappe calls | pass |
+| 13 | The journal holds no phone numbers, names, narratives, reporter identity or raw plates | pass |
+| 14 | Officers cannot edit, delete or view access records or dashboards; auditors are read-only; managers see officer activity only | pass |
+| 15 | Manager, admin and platform-Administrator access is journaled and visible to independent reviewers | pass |
+| 16 | Break-glass: reason, one unit, short expiry, notified, independent review, daily cap, not transferable | pass |
+| 17 | Review signals: scoped, idempotent, sent to reviewers and not the person, no automatic action | pass |
+| 18 | No directory endpoint exists; suggestions capped at 3; device drafts refuse personal/directory data and expire (vitest) | pass |
+| 19 | No cross-tenant disclosure: session replay and journals per site, over HTTP against both demo sites | pass |
+| 20 | A revoked device or suspended user loses sensitive APIs immediately, even with a screen left open | pass |
+
+**Defects found by these tests and fixed:** journal reads for rate limits could miss out-of-band commits (now a fresh connection); an empty case reference could match a record (now never); the request guard passed `purpose` twice; the outbox rejected reviewer roles; journal-based limits persisted into test reruns (fixtures now self-clean and use unique device ids). Design: `docs/security/PRIVACY_PBAC.md`. Matrix: `docs/security/PERMISSION_MATRIX.md` (generated from code, checked in CI).
 
 ### PRD v1.7 acceptance tests (AC-D01..AC-D18)
 All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps/frappe_cpcp/frappe_cpcp/tests/test_dedup.py`; one extra test `d05b` covers resolved-without-departure). D07, D08 and D17 are additionally proven under **real parallel HTTP** (`tests/concurrency/test_parallel.py`).
@@ -41,16 +69,18 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 | Copyright owner confirmed (Johnathan Lightfoot); NOTICE, README, CONTRIBUTING updated | Implemented |
 | PRD v1.7 consolidated (`docs/spec/PRD_v1.7.md`) | Done |
 | Incident consolidation, duplicate allegations, episode lifecycle, repeat offenders (PRD section 60) | **Implemented and verified** (above) |
-| Domain core (authorization matrix, visits, notice clock, charges, triage, audit chain, geo, episodes, matching) | Implemented and verified |
-| Frappe app: 31 DocTypes, permission hooks, registry / visitor / allegation / incident / communications / enforcement / reports APIs | Implemented and verified (integration + isolation + concurrency) |
+| Domain core (authorization matrix, purpose rules, visits, notice clock, charges, triage, audit chain, geo, episodes, matching) | Implemented and verified |
+| **PRD v1.8 purpose-based access: shifts/devices, durable hash-chained access journal, request guard, access review + signals, break-glass, retention** | **Implemented and verified** |
+| Frappe app: 35 DocTypes, permission hooks, registry / visitor / allegation / incident / communications / enforcement / reports APIs | Implemented and verified (integration + isolation + concurrency) |
 | Contact resolution, dialer outcome capture, server SMS (mock adapter), HMAC callbacks, notice clock | Implemented and verified |
 | Enforcement, itemized charges (one penalty per episode), appeals | Implemented and verified; **all legal gates OFF**, no live adapters |
 | Dashboards, hotspot layers (verified vs unverified), thresholded resident summary, repeat-offender report | Implemented and verified (API) |
 | Mobile app (gate, triage, verify with map pin, case/contact, resident reporting, consolidated reports, end-episode) | **Implemented, awaiting physical-device validation** (`docs/ANDROID_TESTING.md`) |
 | Two isolated organization sites; cross-tenant isolation | Verified (HTTP) |
 | GitHub CI (core tests, lint, DocType regeneration check, secret scan, web build, unsigned debug APK) | Passing at last push |
-| Desktop management console | Not started |
-| Backup/restore proof, SBOM / license CI, threat model, permission & sensitivity matrices (docs), app-store compliance matrix | Not started |
+| Desktop management console (including the Access Review dashboard UI) | Not started (APIs ready) |
+| Permission matrix (generated) and privacy/PBAC design docs | Done (`docs/security/`) |
+| Threat model document, SBOM / license CI, backup/restore proof, app-store compliance matrix | Not started |
 | Real SMS / voice / payment providers | Blocked: provider and authorization decisions |
 | iOS archive; physical-device tests | Blocked: need macOS and your phone |
 
@@ -65,6 +95,6 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 * Legal items: clamping/towing authority, Ghana DPA review, SMS/voice/payment provider terms, AI-authorship question (see `docs/legal/OWNERSHIP_AND_PUBLICATION_CLEARANCE.md`).
 
 ## Next
-1. Desktop management console (React web, server-enforced authorization) including a case-review screen for merge/split.
-2. Threat model, permission/sensitivity matrices, store-compliance matrix; SBOM and license CI; backup/restore proof.
+1. Desktop management console (React web) including the Access Review dashboard and case review (merge/split).
+2. Threat model document, store-compliance matrix, SBOM and license CI, backup/restore proof, resident report photos with EXIF stripping.
 3. Android device test with the owner; fix findings.

@@ -5,18 +5,49 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "seq",
+  "prev_hash",
+  "hash",
   "actor",
   "role",
   "estate",
+  "gate",
+  "shift",
+  "device_hash",
+  "session_hash",
+  "action",
   "record_type",
   "record_id",
+  "target_unit",
+  "category",
+  "purpose",
+  "purpose_ref",
   "context",
   "result",
+  "reason_code",
   "request_id",
   "at_utc",
-  "search_term_hash"
+  "search_term_hash",
+  "review_state"
  ],
  "fields": [
+  {
+   "fieldname": "seq",
+   "fieldtype": "Int",
+   "label": "Seq",
+   "unique": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "prev_hash",
+   "fieldtype": "Data",
+   "label": "Prev Hash"
+  },
+  {
+   "fieldname": "hash",
+   "fieldtype": "Data",
+   "label": "Hash"
+  },
   {
    "fieldname": "actor",
    "fieldtype": "Data",
@@ -32,7 +63,34 @@
   {
    "fieldname": "estate",
    "fieldtype": "Data",
-   "label": "Estate"
+   "label": "Estate",
+   "search_index": 1
+  },
+  {
+   "fieldname": "gate",
+   "fieldtype": "Data",
+   "label": "Gate"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Data",
+   "label": "Shift"
+  },
+  {
+   "fieldname": "device_hash",
+   "fieldtype": "Data",
+   "label": "Device Hash"
+  },
+  {
+   "fieldname": "session_hash",
+   "fieldtype": "Data",
+   "label": "Session Hash"
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Data",
+   "label": "Action",
+   "description": "search, view, contact, history, export, print, emergency, list"
   },
   {
    "fieldname": "record_type",
@@ -43,7 +101,32 @@
   {
    "fieldname": "record_id",
    "fieldtype": "Data",
-   "label": "Record Id"
+   "label": "Record Id",
+   "description": "Identifier or safely derived token; never raw personal data"
+  },
+  {
+   "fieldname": "target_unit",
+   "fieldtype": "Data",
+   "label": "Target Unit",
+   "search_index": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "label": "Category",
+   "description": "operational_min, sensitive_personal, restricted_safety, restricted_legal, contact_reveal"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Data",
+   "label": "Purpose",
+   "search_index": 1
+  },
+  {
+   "fieldname": "purpose_ref",
+   "fieldtype": "Data",
+   "label": "Purpose Ref",
+   "description": "Validated case, visit or emergency-grant reference"
   },
   {
    "fieldname": "context",
@@ -54,24 +137,38 @@
    "fieldname": "result",
    "fieldtype": "Select",
    "label": "Result",
-   "options": "Allowed\nDenied",
-   "in_list_view": 1
+   "options": "Allowed\nDenied\nNo Match\nEmergency\nUnsuccessful",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "reason_code",
+   "fieldtype": "Data",
+   "label": "Reason Code"
   },
   {
    "fieldname": "request_id",
    "fieldtype": "Data",
-   "label": "Request Id"
+   "label": "Request Id",
+   "search_index": 1
   },
   {
    "fieldname": "at_utc",
    "fieldtype": "Data",
-   "label": "At Utc"
+   "label": "At Utc",
+   "search_index": 1
   },
   {
    "fieldname": "search_term_hash",
    "fieldtype": "Data",
    "label": "Search Term Hash",
-   "description": "Hash of the search term, not the term itself."
+   "description": "One-way hash of the normalized term, never the term"
+  },
+  {
+   "fieldname": "review_state",
+   "fieldtype": "Data",
+   "label": "Review State",
+   "default": "None"
   }
  ],
  "index_web_pages_for_search": 0,
@@ -86,19 +183,6 @@
  "permissions": [
   {
    "role": "CPCP Org Admin",
-   "permlevel": 0,
-   "read": 1,
-   "write": 0,
-   "create": 0,
-   "delete": 0,
-   "report": 1,
-   "export": 0,
-   "share": 0,
-   "print": 0,
-   "email": 0
-  },
-  {
-   "role": "CPCP Security Manager",
    "permlevel": 0,
    "read": 1,
    "write": 0,
@@ -128,6 +212,6 @@
  "sort_order": "DESC",
  "states": [],
  "track_changes": 0,
- "description": "",
+ "description": "Hash-chained journal of every sensitive access attempt. Written out-of-band so denials survive a rolled-back request.",
  "naming_rule": "Random"
 }

@@ -23,8 +23,10 @@ export interface Ctx {
   go: (s: Screen, arg?: string) => void;
   gate: string;
   setGate: (g: string) => void;
+  shift: { on_duty: boolean; gate?: string; ends_at?: string } | null;
+  refreshShift: () => Promise<void>;
 }
-export type Screen = "home" | "checkin" | "checkout" | "find" | "queue" | "verify" | "cases" | "case" | "report" | "concern" | "settings";
+export type Screen = "home" | "shift" | "checkin" | "checkout" | "find" | "queue" | "verify" | "cases" | "case" | "report" | "concern" | "settings";
 
 export const uuid = () => crypto.randomUUID();
 export const isNetworkError = (e: unknown) => e instanceof TypeError; // fetch() rejects with TypeError when offline

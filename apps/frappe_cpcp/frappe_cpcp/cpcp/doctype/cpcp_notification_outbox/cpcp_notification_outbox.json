@@ -7,6 +7,7 @@
  "field_order": [
   "work_item",
   "incident",
+  "ref",
   "recipient_role",
   "recipient_user",
   "channel",
@@ -29,10 +30,16 @@
    "options": "CPCP Violation Incident"
   },
   {
+   "fieldname": "ref",
+   "fieldtype": "Data",
+   "label": "Ref",
+   "description": "Reference for notices not tied to a work item or incident (grants, review signals)"
+  },
+  {
    "fieldname": "recipient_role",
    "fieldtype": "Select",
    "label": "Recipient Role",
-   "options": "security_officer\nsecurity_manager"
+   "options": "security_officer\nsecurity_manager\norg_admin\nauditor"
   },
   {
    "fieldname": "recipient_user",

@@ -52,6 +52,9 @@ def env():  # noqa: D103 - generator fixture
     users = {k: login(A, f"{k}@{d}") for k in ("resident", "resident2", "resident3", "officer", "officer2", "secmgr", "admin")}
     ctx = whoami_estate(users["officer"], A)
     lat, lon = centre(ctx)
+    for who in ("officer", "officer2"):  # PRD v1.8: officers need a live gate shift
+        r = call(users[who], A, "POST", API + "duty.start_shift", data={"estate": ctx["estate"], "gate": ctx["gates"][0]["name"], "device_id": uuid.uuid4().hex})
+        assert r.status_code == 200, r.text[:200]
 
     admin_b = login(B, "admin@demo-b.example.invalid")
 

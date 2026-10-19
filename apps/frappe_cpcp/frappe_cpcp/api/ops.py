@@ -37,8 +37,12 @@ def active_cases(estate: str) -> list[dict]:
         authorize("verify_incident", "C", estate=estate)  # officers: duty access in their own estate
     else:
         authorize("incident_reports", "R", estate=estate)
-    rows = frappe.get_all("CPCP Violation Incident", filters={"estate": estate, "status": ["not in", list(CLOSED)], "merged_into": ["is", "not set"],
-                                                              "episode_status": ["!=", "Resolved/Closed"]},
+    from frappe_cpcp.services import pbac as pb
+    ctx = pb.duty_check(actor, estate, action="list", record_type="Violation Incident", category="sensitive_personal")
+    filters = {"estate": estate, "status": ["not in", list(CLOSED)], "merged_into": ["is", "not set"], "episode_status": ["!=", "Resolved/Closed"]}
+    if actor.role.value == "security_officer":
+        filters["assigned_officer"] = actor.user  # "My assigned cases": officers never see other officers' cases
+    rows = frappe.get_all("CPCP Violation Incident", filters=filters,
                           fields=["name", "plate_snapshot", "status", "classification", "verified_by", "verified_at", "responsible_unit",
                                   "episode_status", "allegation_count", "priority", "assigned_officer"],
                           order_by="verified_at desc", limit=100)
@@ -52,6 +56,7 @@ def active_cases(estate: str) -> list[dict]:
                     "verified_at": iso(r.verified_at), "notice_deadline": iso(n.deadline) if n else None,
                     "notice_effective_at": iso(n.effective_at) if n else None,
                     "attempts": frappe.db.count("CPCP Communication Attempt", {"incident": r.name})})
+    ctx.allowed(context=f"{len(out)} cases listed")
     return out
 
 
@@ -63,8 +68,10 @@ def incident_detail(incident: str) -> dict:
                                "allegation_count", "priority", "assigned_officer", "first_observed_at", "last_observed_at", "end_evidence"], as_dict=True)
     if not row:
         raise frappe.PermissionError("not permitted")
-    authorize("verify_incident" if get_actor().role.value == "security_officer" else "incident_reports",
-              "C" if get_actor().role.value == "security_officer" else "R", estate=row.estate)
+    actor = authorize("verify_incident" if get_actor().role.value == "security_officer" else "incident_reports",
+                      "C" if get_actor().role.value == "security_officer" else "R", estate=row.estate)
+    from frappe_cpcp.services import pbac as pb
+    pb.case_access(actor, incident, action="view", category="restricted_legal").allowed(record_id=incident)
     allegations = frappe.get_all("CPCP Incident Allegation Link", filters={"parent": incident}, pluck="allegation")
     return {**{k: row[k] for k in ("name", "plate_snapshot", "status", "classification", "rule_version", "pin_source",
                                     "pin_correction_reason", "verified_by")},

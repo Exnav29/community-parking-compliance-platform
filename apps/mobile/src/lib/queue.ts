@@ -22,12 +22,16 @@ export interface Draft {
   payload: Record<string, unknown>;
   observedAt: string; // ISO, device clock, provenance only
   state: DraftState;
+  expiresAt: string;
   attempts: number;
   lastError?: string;
 }
 
 const ALLOWED: ReadonlySet<string> = new Set<DraftKind>(["visitor_check_in", "visitor_check_out", "incident_draft"]);
 const FORBIDDEN_PREFIXES = ["clamp", "tow", "fine", "payment", "release", "penalty"];
+// PRD v1.8: the device never stores people-directory data. Drafts hold only what the officer typed for ONE action.
+const FORBIDDEN_PAYLOAD_KEYS = ["name", "full_name", "phone", "phone_e164", "email", "contacts", "residents", "members", "household", "history", "directory", "visits", "candidates"];
+export const DRAFT_TTL_MS = 72 * 3600 * 1000; // unsent drafts are wiped after 72 hours
 
 export class OfflineQueue {
   private store: KeyValueStore;
@@ -42,7 +46,10 @@ export class OfflineQueue {
   }
   async list(): Promise<Draft[]> {
     const raw = await this.store.get(this.key());
-    return raw ? (JSON.parse(raw) as Draft[]) : [];
+    const all = raw ? (JSON.parse(raw) as Draft[]) : [];
+    const live = all.filter((d) => !d.expiresAt || new Date(d.expiresAt).getTime() > Date.now());
+    if (live.length !== all.length) await this.save(live); // expired drafts are removed, not kept "just in case"
+    return live;
   }
   private async save(items: Draft[]) {
     await this.store.set(this.key(), JSON.stringify(items));
@@ -51,9 +58,11 @@ export class OfflineQueue {
     if (FORBIDDEN_PREFIXES.some((p) => kind.toLowerCase().startsWith(p)) || !ALLOWED.has(kind)) {
       throw new Error(`'${kind}' cannot be performed offline`);
     }
+    const bad = Object.keys(payload).filter((k) => FORBIDDEN_PAYLOAD_KEYS.includes(k.toLowerCase()));
+    if (bad.length) throw new Error(`personal or directory data cannot be stored on the device (${bad.join(", ")})`);
     const draft: Draft = {
       clientUuid: crypto.randomUUID(), kind: kind as DraftKind, payload,
-      observedAt: now.toISOString(), state: "Pending Sync", attempts: 0,
+      observedAt: now.toISOString(), state: "Pending Sync", attempts: 0, expiresAt: new Date(now.getTime() + DRAFT_TTL_MS).toISOString(),
     };
     await this.save([...(await this.list()), draft]);
     return draft;

@@ -27,7 +27,9 @@ DOCTYPE_CAPABILITY = {
     "CPCP Parking Allegation": "triage_reports", "CPCP Security Work Item": "triage_reports",
     "CPCP Allegation Review Event": "triage_reports", "CPCP Notification Outbox": "triage_reports",
     "CPCP Violation Incident": "incident_reports", "CPCP Officer Evidence": "capture_evidence",
-    "CPCP Audit Event": "audit_history", "CPCP Sensitive Access Event": "audit_history",
+    "CPCP Audit Event": "audit_history", "CPCP Sensitive Access Event": "access_review", "CPCP Access Review Flag": "access_review",
+    "CPCP Emergency Access": "emergency_access", "CPCP Gate Shift": "gate_operations", "CPCP Device Registration": "gate_operations",
+    "CPCP Work Item Allegation": "triage_reports",
     "CPCP Communication Attempt": "contact_responsible", "CPCP Communication Event": "contact_responsible",
     "CPCP Warning Notice": "issue_warning", "CPCP Enforcement Action": "execute_enforcement",
     "CPCP Incident Charge": "charge_ledger", "CPCP Appeal": "submit_appeal",
@@ -45,6 +47,17 @@ _VIA_INCIDENT = {"CPCP Communication Attempt": "incident", "CPCP Warning Notice"
 PTYPE_LETTER = {"read": "R", "select": "R", "report": "R", "print": "R", "write": "U", "create": "C",
                 "submit": "A", "cancel": "A"}
 # delete, export, email, share and import are never granted through DocPerm hooks.
+
+# PRD v1.8: officers (and every non-manager role) never browse these through Desk/REST/search; they use purpose-checked APIs.
+OFFICER_DENIED = {
+    "CPCP Person", "CPCP Unit Membership", "CPCP Vehicle", "CPCP Vehicle Unit Association", "CPCP Visitor Session", "CPCP Visit Event",
+    "CPCP Communication Attempt", "CPCP Communication Event", "CPCP Officer Evidence", "CPCP Sensitive Access Event", "CPCP Access Review Flag",
+    "CPCP Emergency Access", "CPCP Gate Shift", "CPCP Device Registration", "CPCP Allegation Receipt",
+}
+NO_BULK = OFFICER_DENIED | {"CPCP Parking Allegation", "CPCP Allegation Review Event"}
+
+
+_NON_SENSITIVE_CAPABILITIES = {"aggregate_dashboards", "submit_report", "estate_units"}
 
 
 class RoleContextRequired(frappe.ValidationError):
@@ -117,9 +130,14 @@ def authorize(capability: str, letter: str, *, estate: str | None = None, unit: 
     res = Resource(org_id=org_id(), estate_id=estate, unit_id=unit, owner_user=owner_user, assigned_to=assigned_to)
     decision = decide(actor, capability, letter, res, now_utc())
     if not decision.allow:
-        from frappe_cpcp.services.audit import log_audit  # local import to avoid cycles
-        log_audit(action="forbidden", entity=capability, entity_id=letter, reason=decision.reason, actor=actor.user,
-                  role=actor.role.value)
+        # Durable (out-of-band) journal entry: a denied request is rolled back, its evidence must not be.
+        from frappe_cpcp.services import access
+        if capability not in _NON_SENSITIVE_CAPABILITIES:
+            try:
+                access.record(actor=actor.user, role=actor.role.value, estate=estate or "", action="authorize", record_type=capability, record_id=letter,
+                              category="restricted_legal", purpose="rbac", result="Denied", reason_code=decision.reason[:60], target_unit="")
+            except access.AuditUnavailable:
+                pass  # still denied; the failure is logged by the journal itself
         raise frappe.PermissionError("not permitted")  # no reason leaked to the caller
     return actor
 
@@ -145,12 +163,18 @@ def has_permission(doc, ptype=None, user=None, **_kw):
     letter = PTYPE_LETTER.get(ptype or "read")
     if capability is None or letter is None:
         return False
+    if doc.doctype in NO_BULK and ptype in ("print", "report", "email", "share", "export"):
+        return False
     try:
         actor = get_actor(user)
     except (frappe.PermissionError, RoleContextRequired):
         # System Manager / Administrator keep Desk access to non-sensitive setup doctypes only.
         return bool(user != "Guest" and _META.get(doc.doctype, {}).get("sensitivity") == "STAFF_OPERATIONAL"
                     and capability in ("manage_users", "change_policy") and "System Manager" in frappe.get_roles(user))
+    if doc.doctype in OFFICER_DENIED and actor.role.value not in ("org_admin", "estate_manager", "security_manager", "auditor"):
+        return False
+    if doc.doctype in ("CPCP Sensitive Access Event", "CPCP Access Review Flag") and actor.role.value not in ("org_admin", "auditor"):
+        return False  # independent review: security managers use the filtered Access Review API, not the raw journal
     return decide(actor, capability, letter, _resource_for(doc, capability), now_utc()).allow
 
 
@@ -164,6 +188,10 @@ def query_conditions(user=None, doctype=None) -> str:
     try:
         actor = get_actor(user)
     except (frappe.PermissionError, RoleContextRequired):
+        return "1=0"
+    if doctype in OFFICER_DENIED and actor.role.value not in ("org_admin", "estate_manager", "security_manager", "auditor"):
+        return "1=0"
+    if doctype in ("CPCP Sensitive Access Event", "CPCP Access Review Flag") and actor.role.value not in ("org_admin", "auditor"):
         return "1=0"
     effective = Role.ORG_ADMIN if actor.role == Role.ESTATE_MANAGER else actor.role
     letters = MATRIX[capability].get(effective, "")

@@ -6,7 +6,7 @@ import { secureStore } from "./lib/device";
 import { OfflineQueue } from "./lib/queue";
 import { timings, uuid, type Ctx, type EstateCtx, type Me, type Screen as ScreenName } from "./lib/types";
 import { useOnline } from "./lib/useOnline";
-import { CheckIn, CheckOut, FindVehicle } from "./screens/Gate";
+import { CheckIn, CheckOut, FindVehicle, StartShift } from "./screens/Gate";
 import { Concern, MyReports } from "./screens/Resident";
 import { Case, Cases, Queue, Verify } from "./screens/Security";
 import "./styles.css";
@@ -21,6 +21,7 @@ export default function App() {
   const [arg, setArg] = useState<string>("");
   const [msg, setMsg] = useState("");
   const [gate, setGate] = useState("");
+  const [shift, setShift] = useState<{ on_duty: boolean; gate?: string; ends_at?: string } | null>(null);
   const online = useOnline();
   const client = useMemo(() => (org ? new FrappeClient(org) : null), [org]);
   const queue = useMemo(() => { const s = secureStore(); return org && s ? new OfflineQueue(s, org.orgId) : null; }, [org]);
@@ -42,10 +43,16 @@ export default function App() {
     }).then((r) => { if (r.synced || r.review) toast(`Synced ${r.synced} saved item(s)${r.review ? `, ${r.review} need review` : ""}.`); });
   }, [online, queue, client, estate, toast]);
 
+  const refreshShift = useCallback(async () => {
+    if (!client) return;
+    try { setShift(await client.get("duty.my_shift")); } catch { setShift(null); }
+  }, [client]);
+  useEffect(() => { if (me?.active_role === "security_officer") refreshShift(); }, [me, refreshShift]);
+
   const signOut = useCallback(async () => {
     await queue?.wipe();
     try { await client?.logout(); } catch { /* local state is cleared regardless */ }
-    setMe(null); setOrg(null); setEstate(null); setScreen("home");
+    setMe(null); setOrg(null); setEstate(null); setShift(null); setScreen("home");
   }, [client, queue]);
 
   if (!client || !me || !estate) return <Connect onReady={(o, m, e) => { setOrg(o); setMe(m); setEstate(e); setGate(localStorage.getItem("cpcp.gate") ?? e.gates[0]?.name ?? ""); }} />;
@@ -54,27 +61,32 @@ export default function App() {
     client, me, estate, queue, online, toast, gate,
     go: (s, a) => { setScreen(s); setArg(a ?? ""); },
     setGate: (g) => { setGate(g); try { localStorage.setItem("cpcp.gate", g); } catch { /* ignore */ } },
+    shift, refreshShift,
   };
   const nav = (cap: string) => me.navigation.includes(cap);
   const resident = me.active_role === "resident";
   const staff = !resident && me.active_role !== "auditor";
+  const officer = me.active_role === "security_officer";
+  const onDuty = !officer || !!shift?.on_duty; // officers must declare duty at a gate before any resident or visitor information opens
 
   return (
     <main>
       <header>
-        <div><h1>{me.display_name}</h1><small>{me.active_role.replace("_", " ")} - {estate.name}</small></div>
+        <div><h1>{me.display_name}</h1><small>{me.active_role.replace("_", " ")} - {estate.name}{officer && shift?.on_duty ? ` - on duty` : ""}</small></div>
         <span className={`dot ${online ? "on" : "off"}`} role="status">{online ? "Online" : "Offline"}</span>
       </header>
+      {officer && <p className="hint" role="note">Looking up residents or visitors is recorded and reviewed. Only use it for your current task.</p>}
       {msg && <p role="status" className="notice" onClick={() => setMsg("")}>{msg}</p>}
       {screen === "home" && (
         <nav className="grid" aria-label="Main actions">
-          {staff && nav("visitor_log") && <>
+          {officer && !onDuty && <Big icon="ON" tone="primary" label="Start shift" hint="Choose your gate. Needed for check-in and lookups." onClick={() => ctx.go("shift")} />}
+          {staff && onDuty && nav("gate_operations") && <>
             <Big icon="IN" label="Check In" hint="Unit first, 3 taps" onClick={() => ctx.go("checkin")} />
             <Big icon="OUT" label="Check Out" hint="Visitors inside" onClick={() => ctx.go("checkout")} />
             <Big icon="?" label="Find Vehicle" onClick={() => ctx.go("find")} />
           </>}
-          {staff && nav("triage_reports") && <Big icon="!" label="Resident Reports" hint="Claim, check, verify" onClick={() => ctx.go("queue")} />}
-          {staff && nav("verify_incident") && <Big icon="#" label="Active Cases" hint="Contact, warning clock" onClick={() => ctx.go("cases")} />}
+          {staff && onDuty && nav("triage_reports") && <Big icon="!" label="Resident Reports" hint="Claim, check, verify" onClick={() => ctx.go("queue")} />}
+          {staff && onDuty && nav("verify_incident") && <Big icon="#" label="My assigned cases" hint="Contact, warning clock" onClick={() => ctx.go("cases")} />}
           {resident && <>
             <Big icon="+" label="Report a concern" hint="Not a fine - security checks first" onClick={() => ctx.go("concern")} />
             <Big icon="=" label="My reports and estate summary" onClick={() => ctx.go("report")} />
@@ -82,6 +94,7 @@ export default function App() {
           <Big icon="i" label="Settings and help" onClick={() => ctx.go("settings")} />
         </nav>
       )}
+      {screen === "shift" && <StartShift c={ctx} />}
       {screen === "checkin" && <CheckIn c={ctx} />}
       {screen === "checkout" && <CheckOut c={ctx} />}
       {screen === "find" && <FindVehicle c={ctx} />}
@@ -102,8 +115,7 @@ function Settings({ c, onSignOut }: { c: Ctx; onSignOut: () => void }) {
   const t = timings("checkin");
   return (
     <Screen title="Settings and help" onBack={() => c.go("home")}>
-      {c.estate.gates.length > 1 && <label>My gate
-        <select value={c.gate} onChange={(e) => c.setGate(e.target.value)}>{c.estate.gates.map((g) => <option key={g.name} value={g.name}>{g.gate_name}</option>)}</select></label>}
+      {c.shift?.on_duty && <p>On duty at: {c.estate.gates.find((g) => g.name === c.shift?.gate)?.gate_name ?? c.shift.gate}. Your shift ends automatically.</p>}
       <p>Saved offline, not yet sent: {c.queue ? pending ?? "..." : "offline saving is available in the installed app only"}</p>
       <p>Check-in speed on this phone: {t.n ? `${t.medianSec} s typical (last ${t.n})` : "no data yet"}. Target: 20 s or less.</p>
       <p className="hint">Camera is used only when you tap Take photo. Location is read once, only when you tap Capture location. Nothing is tracked in the background.</p>

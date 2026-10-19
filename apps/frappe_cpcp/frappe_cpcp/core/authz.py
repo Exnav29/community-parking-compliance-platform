@@ -40,8 +40,15 @@ class DataClass(str, Enum):
 # Estate managers inherit the org_admin row (restricted to appointed estates by scope).
 MATRIX: dict[str, dict[Role, str]] = {
     "estate_units": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "R", Role.SECURITY_OFFICER: "R", Role.AUDITOR: "G"},
-    "resident_registry": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCU", Role.SECURITY_OFFICER: "RCU", Role.AUDITOR: "G"},
-    "visitor_log": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCU", Role.SECURITY_OFFICER: "RCU", Role.AUDITOR: "G"},
+    # PRD v1.8: security OFFICERS hold no standing registry/visitor-log access. They reach protected data only through
+    # purpose-checked APIs (gate_operations / contact_responsible), never by browsing. Managers keep administrative access,
+    # which is logged and independently reviewed.
+    "resident_registry": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCU", Role.AUDITOR: "G"},
+    "visitor_log": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCU", Role.AUDITOR: "G"},
+    "gate_operations": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCU", Role.SECURITY_OFFICER: "RCU"},
+    "access_review": {Role.ORG_ADMIN: "RU", Role.AUDITOR: "R", Role.SECURITY_MANAGER: "R"},
+    "emergency_access": {Role.ORG_ADMIN: "RCA", Role.SECURITY_MANAGER: "RCA", Role.SECURITY_OFFICER: "C"},
+    "device_revocation": {Role.ORG_ADMIN: "A", Role.SECURITY_MANAGER: "A"},
     "own_vehicle_request": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCU", Role.SECURITY_OFFICER: "RCU", Role.RESIDENT: "SRCU"},
     "submit_report": {Role.ORG_ADMIN: "C", Role.SECURITY_MANAGER: "C", Role.SECURITY_OFFICER: "C", Role.RESIDENT: "C"},
     "triage_reports": {Role.ORG_ADMIN: "RCU", Role.SECURITY_MANAGER: "RCUA", Role.SECURITY_OFFICER: "SRCU", Role.RESIDENT: "SR", Role.AUDITOR: "G"},
@@ -67,6 +74,8 @@ MATRIX: dict[str, dict[Role, str]] = {
 CAPABILITY_CLASS: dict[str, DataClass] = {
     "resident_registry": DataClass.SENSITIVE_RESIDENT_REGISTRY,
     "visitor_log": DataClass.SENSITIVE_VISITOR_LOG,
+    "gate_operations": DataClass.SENSITIVE_VISITOR_LOG,
+    "access_review": DataClass.IMMUTABLE_AUDIT,
     "own_vehicle_request": DataClass.SELF_HOUSEHOLD,
     "capture_evidence": DataClass.RESTRICTED_EVIDENCE,
     "charge_ledger": DataClass.FINANCIAL,

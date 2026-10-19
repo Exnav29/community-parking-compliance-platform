@@ -16,6 +16,7 @@ jobs:
       - run: pip install pytest ruff
       - run: ruff check apps/frappe_cpcp --select E9,F
       - run: python scripts/gen_doctypes.py && git diff --exit-code
+      - run: python scripts/gen_permission_matrix.py && git diff --exit-code docs/security/PERMISSION_MATRIX.md
       - run: python -m pytest
         working-directory: apps/frappe_cpcp
   secret-scan:

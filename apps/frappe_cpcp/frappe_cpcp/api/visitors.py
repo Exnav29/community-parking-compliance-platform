@@ -11,7 +11,8 @@ import frappe
 from frappe_cpcp.core import visits as v
 from frappe_cpcp.core.plates import normalize_plate
 from frappe_cpcp.permissions import authorize
-from frappe_cpcp.services.audit import log_audit, log_sensitive_access
+from frappe_cpcp.services import pbac as svc
+from frappe_cpcp.services.audit import log_audit
 from frappe_cpcp.services.common import from_db, iso, require, to_db, unit_by_label, utcnow
 
 ACTIVE_STATUSES = ["Checked In", "Exit Unconfirmed", "Needs Supervisor Review"]
@@ -57,7 +58,9 @@ def _gate_ok(estate: str, gate: str | None) -> None:
 def check_in_visitor(estate: str, host_unit_label: str, client_uuid: str, plate: str | None = None,
                      category: str = "Guest", gate: str | None = None, observed_at: str | None = None,
                      no_vehicle: int = 0, confirm_visiting_today: int = 0) -> dict:
-    actor = authorize("visitor_log", "C", estate=estate)
+    actor = authorize("gate_operations", "C", estate=estate)
+    ctx = svc.gate_access(actor, estate, action="write", record_type="Visitor Session", target_unit=(host_unit_label or "").strip().upper(), client_gate=gate)
+    gate = ctx.gate or gate  # an officer's gate is the gate of their live shift, never a client claim
     require(client_uuid, "client_uuid")
     if not int(confirm_visiting_today):
         frappe.throw("Officer must confirm the vehicle is visiting this unit today", frappe.ValidationError)
@@ -100,6 +103,7 @@ def check_in_visitor(estate: str, host_unit_label: str, client_uuid: str, plate:
     _event(doc.name, "ENTRY", actor.user, gate, observed, now, client_uuid + ":in", source=source)
     log_audit(action="visitor_check_in", entity="CPCP Visitor Session", entity_id=doc.name, role=actor.role.value,
               detail={"estate": estate, "source": source})
+    ctx.allowed(record_id=doc.name, context="check-in")
     return {"replayed": False, **_view(doc)}
 
 
@@ -116,7 +120,10 @@ def check_out_visitor(session: str, client_uuid: str, gate: str | None = None, o
     estate = frappe.db.get_value("CPCP Visitor Session", session, "estate")
     if not estate:
         raise frappe.PermissionError("not permitted")  # unknown id is indistinguishable from forbidden
-    actor = authorize("visitor_log", "U", estate=estate)
+    actor = authorize("gate_operations", "U", estate=estate)
+    unit_label = frappe.db.get_value("CPCP Visitor Session", session, "host_unit_label") or ""
+    ctx = svc.gate_access(actor, estate, action="write", record_type="Visitor Session", target_unit=unit_label, client_gate=gate, purpose=svc.pbac.Purpose.GATE_EXIT)
+    gate = ctx.gate or gate
     _gate_ok(estate, gate)
     frappe.db.sql("select name from `tabCPCP Visitor Session` where name = %s for update", (session,))
     doc = frappe.get_doc("CPCP Visitor Session", session)
@@ -146,6 +153,7 @@ def check_out_visitor(session: str, client_uuid: str, gate: str | None = None, o
     _event(session, "EXIT", actor.user, gate, observed, now, key, source=source)
     log_audit(action="visitor_check_out", entity="CPCP Visitor Session", entity_id=session, role=actor.role.value,
               detail={"duration_minutes": closed.duration_minutes})
+    ctx.allowed(record_id=session, context="check-out")
     return {"replayed": False, **_view(doc)}
 
 
@@ -175,7 +183,9 @@ def supervisor_correct_exit(session: str, client_uuid: str, estimated_exit_at: s
 @frappe.whitelist()
 def active_visitors(estate: str, plate: str | None = None, unit_label: str | None = None, limit: int = 50) -> list[dict]:
     """Visitors currently inside, estate-scoped, minimal columns. Cross-gate: any gate in the estate sees all."""
-    actor = authorize("visitor_log", "R", estate=estate)
+    actor = authorize("gate_operations", "R", estate=estate)
+    ctx = svc.gate_access(actor, estate, action="list", record_type="Visitor Session", category="sensitive_personal", purpose=svc.pbac.Purpose.GATE_EXIT,
+                          term=(plate or unit_label), rate_actions=("list",), rate_limit=int(frappe.db.get_single_value("CPCP Settings", "suggestion_limit_per_hour") or 30) * 4)
     filters = {"estate": estate, "status": ["in", ACTIVE_STATUSES]}
     if plate:
         try:
@@ -186,5 +196,6 @@ def active_visitors(estate: str, plate: str | None = None, unit_label: str | Non
         filters["host_unit_label"] = unit_label.strip().upper()
     rows = frappe.get_all("CPCP Visitor Session", filters=filters, order_by="entry_at desc", limit=min(int(limit), 200),
                           fields=["name"])
-    log_sensitive_access(record_type="Visitor Session", estate=estate, context="active visitors list", role=actor.role.value)
-    return [_view(frappe.get_doc("CPCP Visitor Session", r.name)) for r in rows]
+    out = [_view(frappe.get_doc("CPCP Visitor Session", r.name)) for r in rows]
+    ctx.allowed(context=f"{len(out)} sessions listed")
+    return out

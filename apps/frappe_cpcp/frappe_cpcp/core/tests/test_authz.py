@@ -84,13 +84,15 @@ def test_officer_cannot_change_fees_or_approve_enforcement():
     o = actor(Role.SECURITY_OFFICER)
     assert not can(o, "change_policy", "U")
     assert not can(o, "approve_enforcement", "A")
-    assert can(o, "resident_registry", "R")
+    assert not can(o, "resident_registry", "R")  # PRD v1.8: no standing registry access for officers
+    assert not can(o, "visitor_log", "R")
+    assert can(o, "gate_operations", "C")  # gate work goes through purpose-checked APIs
 
 
 def test_officer_estate_scope():
     o = actor(Role.SECURITY_OFFICER)
-    assert can(o, "visitor_log", "R", Resource("orgA", "E1"))
-    assert not can(o, "visitor_log", "R", Resource("orgA", "E2"))
+    assert can(o, "gate_operations", "R", Resource("orgA", "E1"))
+    assert not can(o, "gate_operations", "R", Resource("orgA", "E2"))
 
 
 def test_security_manager_cannot_edit_fees():
@@ -135,7 +137,7 @@ def test_non_org_wide_role_without_estates_has_no_scope():
 
 def test_tow_provider_only_assigned_jobs():
     t = actor(Role.TOW_PROVIDER, user="tow1")
-    assert not can(t, "resident_registry") and not can(t, "visitor_log")
+    assert not can(t, "resident_registry") and not can(t, "visitor_log") and not can(t, "gate_operations")
     assert can(t, "execute_enforcement", "U", Resource("orgA", "E1", assigned_to="tow1"))
     assert not can(t, "execute_enforcement", "U", Resource("orgA", "E1", assigned_to="other"))
 
@@ -161,3 +163,13 @@ def test_officer_can_see_and_claim_unclaimed_triage_in_own_estate_only():
     assert not can(o, "triage_reports", "U", Resource("orgA", "E1", assigned_to="other-officer"))
     # the same latitude is NOT given for enforcement execution
     assert not can(o, "execute_enforcement", "U", Resource("orgA", "E1"))
+
+
+def test_v18_no_officer_standing_access_to_sensitive_classes():
+    o = actor(Role.SECURITY_OFFICER)
+    for cap in ("resident_registry", "visitor_log", "access_review", "device_revocation"):
+        for letter in "RCUA":
+            assert not can(o, cap, letter), (cap, letter)
+    assert not can(actor(Role.SECURITY_OFFICER), "access_review", "R")
+    assert can(actor(Role.AUDITOR), "access_review", "R") and not can(actor(Role.AUDITOR), "access_review", "U")
+    assert can(actor(Role.SECURITY_OFFICER), "emergency_access", "C") and not can(actor(Role.SECURITY_OFFICER), "emergency_access", "A")

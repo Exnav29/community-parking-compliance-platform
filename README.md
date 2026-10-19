@@ -14,7 +14,7 @@ accounting and appeals. **The goal is voluntary compliance and safe access, not 
 
 | Area | State |
 |---|---|
-| Domain core, 31-DocType Frappe app, incident lifecycle (PRD v1.7), communications, gated enforcement, reports | Implemented and verified; see [docs/STATUS.md](docs/STATUS.md) |
+| Domain core, 35-DocType Frappe app, incident lifecycle (v1.7), **purpose-based resident privacy (v1.8)**, communications, gated enforcement, reports | Implemented and verified; see [docs/STATUS.md](docs/STATUS.md) |
 | Mobile app (React + Capacitor) | Implemented; awaiting physical-device validation |
 | Isolated Frappe site per organization (dev: 2 sites), cross-tenant isolation | Verified over HTTP |
 | Desktop management console, map/finance screens | Not started |
@@ -26,7 +26,7 @@ See [docs/STATUS.md](docs/STATUS.md) for verified results and blockers, and
 One isolated Frappe site (own database, files, backups) **per subscribing organization**; one or more estates
 inside it. Authorization is a single tested service (`core/authz.py`) called by every API and by Frappe
 `has_permission` / `permission_query_conditions` hooks. Residents have no access to the resident/vehicle
-registry or visitor log. Anonymous reports use a separate unauthenticated intake with no reporter correlator.
+registry or visitor log, and **security officers have no standing directory access either**: every sensitive lookup needs a server-verified purpose (a live gate shift or an assigned case), returns minimum fields, and is written to a tamper-evident journal ([docs/security/PRIVACY_PBAC.md](docs/security/PRIVACY_PBAC.md)). Anonymous reports use a separate unauthenticated intake with no reporter correlator.
 Details: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ## Quick start (Docker, synthetic data only)

@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-19 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule",
+  "actor_user",
+  "estate",
+  "window_key",
+  "summary",
+  "count",
+  "severity",
+  "status",
+  "reviewer",
+  "review_note",
+  "created_at",
+  "reviewed_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule",
+   "fieldtype": "Data",
+   "label": "Rule",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "actor_user",
+   "fieldtype": "Data",
+   "label": "Actor User",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "estate",
+   "fieldtype": "Data",
+   "label": "Estate"
+  },
+  {
+   "fieldname": "window_key",
+   "fieldtype": "Data",
+   "label": "Window Key",
+   "unique": 1
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary",
+   "description": "Counts and references only; no personal data"
+  },
+  {
+   "fieldname": "count",
+   "fieldtype": "Int",
+   "label": "Count"
+  },
+  {
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "label": "Severity",
+   "options": "Low\nMedium\nHigh",
+   "default": "Medium"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "New\nIn Review\nClosed - No Action\nEscalated",
+   "default": "New",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "reviewer",
+   "fieldtype": "Link",
+   "label": "Reviewer",
+   "options": "User"
+  },
+  {
+   "fieldname": "review_note",
+   "fieldtype": "Small Text",
+   "label": "Review Note"
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At"
+  },
+  {
+   "fieldname": "reviewed_at",
+   "fieldtype": "Datetime",
+   "label": "Reviewed At"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-19 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CPCP",
+ "name": "CPCP Access Review Flag",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "CPCP Org Admin",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  },
+  {
+   "role": "CPCP Auditor",
+   "permlevel": 0,
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 0,
+   "share": 0,
+   "print": 0,
+   "email": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "A review SIGNAL for human reviewers. Never evidence of misconduct and never triggers discipline automatically.",
+ "autoname": "format:ARF-{#####}",
+ "naming_rule": "Expression (old style)"
+}

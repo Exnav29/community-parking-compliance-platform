@@ -17,7 +17,9 @@ from frappe_cpcp.core import geo
 from frappe_cpcp.core.plates import normalize_plate
 from frappe_cpcp.permissions import authorize, get_actor
 from frappe_cpcp.services import episodes as svc
-from frappe_cpcp.services.audit import log_audit, log_sensitive_access
+from frappe_cpcp.services import access as access_svc
+from frappe_cpcp.services import pbac as pb
+from frappe_cpcp.services.audit import log_audit
 from frappe_cpcp.services.common import deadlock_retry, active_policy, age_minutes, iso, require, to_db, utcnow
 
 CATEGORIES = ["Gate or driveway blocked", "Roadway obstruction", "Unsafe parking", "Unauthorized space",
@@ -206,6 +208,7 @@ def _assignee_for(allegation: str) -> str | None:
 def triage_queue(estate: str) -> list[dict]:
     """One consolidated row per actionable case ("3 independent reports"). Coarse, privacy-safe projection."""
     actor = authorize("triage_reports", "R", estate=estate)
+    ctx = pb.duty_check(actor, estate, action="list", record_type="Security Work Item", category="restricted_safety")
     rows = frappe.get_all("CPCP Security Work Item", filters={"estate": estate, "status": ["in", ["Open", "Claimed", "Escalated"]]},
                           fields=["name", "allegation", "urgency", "status", "claimed_by", "creation", "allegation_count", "latest_at",
                                   "review_needed", "review_note", "candidate_incident", "lease_expires_at"], order_by="creation asc")
@@ -230,6 +233,7 @@ def triage_queue(estate: str) -> list[dict]:
                     "coarse_location": coarse, "follow_up_available": a.mode != "Anonymous",
                     "possible_related_case": bool(r.candidate_incident), "related_case_already_handled": handled,
                     "needs_review": bool(r.review_needed)})
+    ctx.allowed(context=f"{len(out)} cases listed")
     return out
 
 
@@ -244,6 +248,7 @@ def claim_work_item(work_item: str) -> dict:
     """Atomic claim with a lease: of two simultaneous officers exactly one wins; an expired lease can be taken over."""
     wi = _wi(work_item)
     actor = authorize("triage_reports", "U", estate=wi.estate)
+    pb.duty_check(actor, wi.estate, action="write", record_type="Security Work Item").allowed(record_id=work_item, context="claim")
     if wi.incident:
         frappe.throw("This report is already part of a case", frappe.ValidationError)
     now = utcnow()
@@ -277,7 +282,7 @@ def open_allegation(allegation: str) -> dict:
     if not a:
         raise frappe.PermissionError("not permitted")
     actor = authorize("triage_reports", "R", estate=a.estate, assigned_to=_assignee_for(allegation))
-    log_sensitive_access(record_type="Parking Allegation", record_id=allegation, estate=a.estate, context="open", role=actor.role.value)
+    pb.duty_check(actor, a.estate, action="view", record_type="Parking Allegation", category="restricted_safety").allowed(record_id=allegation, context="open")
     wi = svc.work_item_for_allegation(allegation)
     others = [m for m in (frappe.get_all("CPCP Work Item Allegation", filters={"parent": wi}, pluck="allegation") if wi else []) if m != allegation]
     return {"allegation": a.name, "label": "UNVERIFIED RESIDENT ALLEGATION", "mode": a.mode, "category": a.category,
@@ -298,7 +303,8 @@ def reveal_reporter(allegation: str, reason: str) -> dict:
     actor = authorize("triage_reports", "A", estate=a.estate)  # approve-level: security manager / org admin only
     if len((reason or "").strip()) < 10:
         frappe.throw("A documented follow-up purpose (min 10 characters) is required", frappe.ValidationError)
-    log_sensitive_access(record_type="Reporter Identity", record_id=allegation, estate=a.estate, context=reason, role=actor.role.value)
+    access_svc.record(actor=actor.user, role=actor.role.value, estate=a.estate, action="reveal", record_type="Reporter Identity", record_id=allegation,
+                      category="restricted_safety", purpose="supervisor_review", purpose_ref=allegation, context="reporter identity revealed for follow-up")
     log_audit(action="reporter_identity_revealed", entity="CPCP Parking Allegation", entity_id=allegation, reason=reason, role=actor.role.value)
     if a.mode != "Identified":
         return {"reporter": None, "note": "Anonymous report: no identity is stored."}

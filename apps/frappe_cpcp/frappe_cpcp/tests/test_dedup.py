@@ -44,6 +44,12 @@ class TestDedup(FrappeTestCase):
         cls.seed = setup.seed_demo("a")
         e = next(iter(cls.seed["estates"].values()))
         cls.estate = e["name"]
+        cls.gate = e["gate"]
+        from frappe_cpcp.api import duty
+        for who in ("officer", "officer2"):  # PRD v1.8: gate work needs a live shift
+            frappe.set_user(f"{who}@demo-a.example.invalid")
+            duty.start_shift(cls.estate, cls.gate, f"test-device-{who}")
+        frappe.set_user("Administrator")
         frappe.db.set_single_value("CPCP Settings", "allegation_rate_limit_per_hour", 100000)
 
     @classmethod

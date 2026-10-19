@@ -15,7 +15,8 @@ from frappe_cpcp.core import comms as cm
 from frappe_cpcp.core import noticeclock as nc
 from frappe_cpcp.core.phones import mask_phone
 from frappe_cpcp.permissions import authorize
-from frappe_cpcp.services.audit import log_audit, log_sensitive_access
+from frappe_cpcp.services import pbac as pb
+from frappe_cpcp.services.audit import log_audit
 from frappe_cpcp.services.common import deadlock_retry, iso, require, to_db, utcnow
 
 DEFAULT_SMS_TEMPLATE = ("Community Security: Vehicle {plate} is parked in a restricted area at {zone}. Please move it "
@@ -28,7 +29,7 @@ _MOCK = cm.MockSmsProvider()  # process-local; real adapters are registered here
 def _incident(name: str) -> dict:
     row = frappe.db.get_value("CPCP Violation Incident", name,
                               ["name", "estate", "plate_normalized", "plate_snapshot", "status", "policy_version", "classification",
-                               "responsible_unit", "zone", "verified_by"], as_dict=True)
+                               "responsible_unit", "zone", "verified_by", "assigned_officer"], as_dict=True)
     if not row:
         raise frappe.PermissionError("not permitted")
     return row
@@ -78,11 +79,12 @@ def _resolve(inc: dict) -> dict:
 @frappe.whitelist()
 def resolve_violation_contacts(incident: str) -> dict:
     inc = _incident(incident)
-    actor = authorize("contact_responsible", "R", estate=inc["estate"], assigned_to=None)
+    actor = authorize("contact_responsible", "R", estate=inc["estate"], assigned_to=inc["assigned_officer"])
+    ctx = pb.case_access(actor, incident, action="contact", category="sensitive_personal")  # assigned, open, and the officer is on duty
     res = _resolve(inc)
     if res["unit"] and not inc["responsible_unit"]:
         frappe.db.set_value("CPCP Violation Incident", incident, {"responsible_unit": res["unit"], "match_basis": res["basis"]}, update_modified=False)
-    log_sensitive_access(record_type="Contact Resolution", record_id=incident, estate=inc["estate"], context=res["basis"], role=actor.role.value)
+    ctx.allowed(record_id=incident, context=res["basis"])
     return {"basis": res["basis"], "label": {"none": "No Verified Match", "ambiguous": "Ambiguous - supervisor review required"}.get(res["basis"], "Match is a candidate, not proof of who was driving"),
             "contacts": [{"contact_id": c.contact_id, "relationship": c.relationship.value, "first_name": n,
                           "number": mask_phone(c.phone_e164), "last_updated": c.verified_on} for c, n in res["contacts"]],
@@ -110,6 +112,7 @@ def initiate_call(incident: str, contact_id: str, client_uuid: str) -> dict:
     require(client_uuid, "client_uuid")
     inc = _incident(incident)
     actor = authorize("contact_responsible", "C", estate=inc["estate"])
+    ctx = pb.case_access(actor, incident, action="contact", category="contact_reveal")
     prior = frappe.db.get_value("CPCP Communication Attempt", {"client_uuid": client_uuid}, "name")
     contact = _pick(inc, contact_id)
     if prior:
@@ -120,7 +123,7 @@ def initiate_call(incident: str, contact_id: str, client_uuid: str) -> dict:
                         "destination_masked": mask_phone(contact.phone_e164), "destination": contact.phone_e164,
                         "officer": actor.user, "initiated_at": to_db(utcnow()), "provenance": rec.provenance.value,
                         "duration_label": rec.duration_label, "client_uuid": client_uuid}).insert(ignore_permissions=True)
-    log_sensitive_access(record_type="Contact Number", record_id=a.name, estate=inc["estate"], context="dialer", role=actor.role.value)
+    ctx.allowed(record_id=a.name, context="dialer number revealed")
     log_audit(action="call_requested", entity="CPCP Communication Attempt", entity_id=a.name, role=actor.role.value)
     _event(a.name, "dialer_open_requested", "")
     return {"attempt": a.name, "replayed": False, "dial": contact.phone_e164,
@@ -142,6 +145,7 @@ def record_call_outcome(attempt: str, outcome: str, warning_confirmed: int = 0, 
     a = frappe.get_doc("CPCP Communication Attempt", attempt)
     inc = _incident(a.incident)
     actor = authorize("contact_responsible", "U", estate=inc["estate"])
+    pb.case_access(actor, a.incident, action="write", category="operational_min").allowed(record_id=attempt)
     if a.channel != "call_dialer":
         frappe.throw("Provider-mediated calls are recorded by the provider callback only", frappe.ValidationError)
     if a.officer != actor.user and actor.role.value not in ("security_manager", "org_admin", "estate_manager"):
@@ -174,6 +178,7 @@ def establish_notice_clock(incident: str, attempt: str) -> dict:
     """Server-authoritative. The device clock and any attempt that is not a confirmed notice cannot start it."""
     inc = _incident(incident)
     actor = authorize("issue_warning", "C", estate=inc["estate"])
+    pb.case_access(actor, incident, action="write", category="operational_min").allowed(record_id=incident, context="notice clock")
     a = frappe.get_doc("CPCP Communication Attempt", attempt)
     if a.incident != incident:
         raise frappe.PermissionError("not permitted")
@@ -209,6 +214,7 @@ def send_case_sms(incident: str, contact_id: str, client_uuid: str) -> dict:
     require(client_uuid, "client_uuid")
     inc = _incident(incident)
     actor = authorize("contact_responsible", "C", estate=inc["estate"])
+    ctx = pb.case_access(actor, incident, action="contact", category="contact_reveal")
     prior = frappe.db.get_value("CPCP Communication Attempt", {"client_uuid": client_uuid}, "name")
     if prior:
         return {"attempt": prior, "replayed": True}
@@ -235,6 +241,7 @@ def send_case_sms(incident: str, contact_id: str, client_uuid: str) -> dict:
     frappe.db.set_value("CPCP Communication Attempt", a.name, {"provider_ref": ref, "sms_status": cm.SmsStatus.ACCEPTED.value}, update_modified=False)
     _event(a.name, "provider_accepted", "")
     log_audit(action="sms_sent", entity="CPCP Communication Attempt", entity_id=a.name, role=actor.role.value, detail={"len": len(text)})
+    ctx.allowed(record_id=a.name, context="sms sent via server; number not revealed")
     return {"attempt": a.name, "replayed": False, "status": cm.SmsStatus.ACCEPTED.value,
             "note": "Accepted by the provider. This is not delivery, and not acknowledgement."}
 
@@ -273,6 +280,7 @@ def acknowledge_sms(attempt: str, note: str) -> dict:
     a = frappe.get_doc("CPCP Communication Attempt", attempt)
     inc = _incident(a.incident)
     actor = authorize("contact_responsible", "U", estate=inc["estate"])
+    pb.case_access(actor, a.incident, action="write", category="operational_min").allowed(record_id=attempt)
     if a.channel != "sms" or not (note or "").strip():
         frappe.throw("An SMS attempt and a note describing the acknowledgement are required", frappe.ValidationError)
     frappe.db.set_value("CPCP Communication Attempt", attempt, "acknowledged", 1, update_modified=False)
@@ -284,8 +292,8 @@ def acknowledge_sms(attempt: str, note: str) -> dict:
 @frappe.whitelist()
 def comms_timeline(incident: str) -> dict:
     inc = _incident(incident)
-    actor = authorize("contact_responsible", "R", estate=inc["estate"])
-    log_sensitive_access(record_type="Communication Timeline", record_id=incident, estate=inc["estate"], role=actor.role.value)
+    actor = authorize("contact_responsible", "R", estate=inc["estate"], assigned_to=inc["assigned_officer"])
+    pb.case_access(actor, incident, action="view", record_type="Communication Timeline", category="restricted_legal").allowed(record_id=incident)
     rows = frappe.get_all("CPCP Communication Attempt", filters={"incident": incident}, order_by="initiated_at asc",
                           fields=["name", "channel", "relationship", "destination_masked", "outcome", "provenance", "duration_label",
                                   "sms_status", "acknowledged", "initiated_at", "message_text", "officer"])
@@ -302,7 +310,8 @@ def comms_timeline(incident: str) -> dict:
 def preview_sms(incident: str, contact_id: str) -> dict:
     """Exact text that would be sent, plus the recipient label, before the officer explicitly confirms (PRD 42.2)."""
     inc = _incident(incident)
-    authorize("contact_responsible", "C", estate=inc["estate"])
+    actor = authorize("contact_responsible", "C", estate=inc["estate"])
+    pb.case_access(actor, incident, action="contact", category="sensitive_personal").allowed(record_id=incident, context="sms preview")
     contact = _pick(inc, contact_id)
     s = frappe.get_single("CPCP Settings")
     zone = frappe.db.get_value("CPCP Zone", inc["zone"], "zone_name") if inc["zone"] else "the estate"

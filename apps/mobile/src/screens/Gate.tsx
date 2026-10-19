@@ -7,6 +7,31 @@ import { isNetworkError, recordTiming, uuid, type Ctx } from "../lib/types";
 const recentUnits = (): string[] => { try { return JSON.parse(localStorage.getItem("cpcp.recentUnits") ?? "[]"); } catch { return []; } };
 const pushRecent = (u: string) => { try { localStorage.setItem("cpcp.recentUnits", JSON.stringify([u, ...recentUnits().filter((x) => x !== u)].slice(0, 6))); } catch { /* ignore */ } };
 
+const deviceId = (): string => {
+  try {
+    let d = localStorage.getItem("cpcp.device");
+    if (!d) { d = crypto.randomUUID(); localStorage.setItem("cpcp.device", d); }
+    return d;
+  } catch { return "unknown-device"; }
+};
+
+/** Declare duty at one gate. The server derives the gate for every later action; the app never sends a gate id again. */
+export function StartShift({ c }: { c: Ctx }) {
+  const [gate, setGate] = useState(c.estate.gates[0]?.name ?? "");
+  async function go() {
+    try { await c.client.post("duty.start_shift", { estate: c.estate.estate, gate, device_id: deviceId() }); await c.refreshShift(); c.toast("You are on duty."); c.go("home"); }
+    catch (e) { c.toast((e as Error).message || "Could not start the shift"); }
+  }
+  return (
+    <Screen title="Start shift" onBack={() => c.go("home")}>
+      <p>Which gate are you at?</p>
+      <div className="chips">{c.estate.gates.map((g) => <Chip key={g.name} active={gate === g.name} onClick={() => setGate(g.name)}>{g.gate_name}</Chip>)}</div>
+      <Big icon="ON" tone="ok" label="I am on duty here" onClick={go} disabled={!gate} />
+      <p className="hint">Your shift ends by itself after a set time, or when a supervisor ends it.</p>
+    </Screen>
+  );
+}
+
 interface Cand { kind: string; plate: string; hint?: string; make?: string; color?: string; active_session?: string | null }
 
 /** Unit first. A suggestion is a convenience, never an authorization: the officer confirms the car and the visit. */
@@ -15,20 +40,21 @@ export function CheckIn({ c }: { c: Ctx }) {
   const [unit, setUnit] = useState("");
   const [cands, setCands] = useState<Cand[] | null>(null);
   const [plate, setPlate] = useState("");
+  const [hint, setHint] = useState("");
   const [done, setDone] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function load(u: string) {
     setUnit(u); setPlate(""); setCands(null);
     if (!u) return;
-    try { setCands((await c.client.get("registry.lookup_visits_for_unit", { estate: c.estate.estate, unit_label: u })).candidates); }
+    try { setCands((await c.client.get("registry.lookup_visits_for_unit", { estate: c.estate.estate, unit_label: u, ...(hint.trim().length >= 2 ? { plate_hint: hint.trim() } : {}) })).candidates); }
     catch (e) { setCands([]); c.toast(isNetworkError(e) ? "Offline: type the plate. It will be saved and sent later." : "Unit not found in this estate."); }
   }
 
   async function confirm() {
     let p: string;
     try { p = normalizePlate(plate); } catch (e) { c.toast((e as Error).message); return; }
-    const args = { estate: c.estate.estate, host_unit_label: unit, plate: p, gate: c.gate, client_uuid: uuid(), confirm_visiting_today: 1 };
+    const args = { estate: c.estate.estate, host_unit_label: unit, plate: p, client_uuid: uuid(), confirm_visiting_today: 1 };  // no gate id: the server uses your shift
     setBusy(true);
     try {
       const r = await c.client.post("visitors.check_in_visitor", args);
@@ -53,7 +79,11 @@ export function CheckIn({ c }: { c: Ctx }) {
       <label>1. Which unit is the visitor going to?
         <input value={unit} onChange={(e) => setUnit(e.target.value.toUpperCase())} onBlur={() => load(unit)} placeholder="e.g. A1" autoCapitalize="characters" inputMode="text" enterKeyHint="go" />
       </label>
+      <label>First letters of the plate you can see (makes the answer shorter and private)
+        <input value={hint} onChange={(e) => setHint(e.target.value.toUpperCase())} autoCapitalize="characters" maxLength={6} />
+      </label>
       <div className="chips">{recentUnits().map((u) => <Chip key={u} onClick={() => load(u)} active={u === unit}>{u}</Chip>)}</div>
+      <p className="hint">Only a few matching vehicles are shown. Names and phone numbers are never shown here. This lookup is recorded.</p>
       {cands && cands.length > 0 && <>
         <p>2. Tap the vehicle that is here now:</p>
         <ul className="plain">{cands.map((x) => (
@@ -84,7 +114,7 @@ export function CheckOut({ c }: { c: Ctx }) {
 
   async function out() {
     if (!sel) return;
-    const args = { session: sel.session, gate: c.gate, client_uuid: uuid() };
+    const args = { session: sel.session, client_uuid: uuid() };
     try {
       const r = await c.client.post("visitors.check_out_visitor", args);
       c.toast(`${sel.plate} out after ${r.duration_minutes ?? "?"} min`); setSel(null); await load();
@@ -114,7 +144,7 @@ export function FindVehicle({ c }: { c: Ctx }) {
   const [plate, setPlate] = useState("");
   const [res, setRes] = useState<Record<string, string> | null>(null);
   async function go() {
-    try { setRes(await c.client.get("registry.lookup_plate", { estate: c.estate.estate, plate })); }
+    try { setRes(await c.client.get("registry.lookup_plate", { estate: c.estate.estate, plate, purpose: "gate" })); }
     catch (e) { c.toast(isNetworkError(e) ? "Offline" : "Not permitted or invalid plate"); }
   }
   const text: Record<string, string> = { resident_vehicle: "Resident vehicle", active_visitor: "Visitor inside now", none: "No match", ambiguous: "More than one match - ask a supervisor" };

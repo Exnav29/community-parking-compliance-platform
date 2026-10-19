@@ -62,9 +62,22 @@ def test_host_header_swap_does_not_change_tenant_data():
     assert r.status_code in (401, 403)
 
 
+def _on_duty(session, host):
+    ctx = call(host, "GET", "/api/method/frappe_cpcp.api.ops.estate_context", session=session)[1].json()["message"][0]
+    r = call(host, "POST", "/api/method/frappe_cpcp.api.duty.start_shift", session=session,
+             data={"estate": ctx["estate"], "gate": ctx["gates"][0]["name"], "device_id": os.urandom(6).hex()})[1]
+    assert r.status_code == 200, r.text[:200]
+
+
 def test_same_labels_are_independent_per_tenant():
     sa = login(A, "officer@demo-a.example.invalid")
     sb = login(B, "officer@demo-b.example.invalid")
+    _on_duty(sa, A)
+    _on_duty(sb, B)
+    for host, user in ((A, "admin@demo-a.example.invalid"), (B, "admin@demo-b.example.invalid")):  # journal-based plate limit: allow this test's calls
+        adm = login(host, user)
+        call(host, "POST", "/api/method/frappe.client.set_value", session=adm,
+             data={"doctype": "CPCP Settings", "name": "CPCP Settings", "fieldname": "plate_lookups_per_hour", "value": 100000})
     ra = call(A, "GET", "/api/method/frappe_cpcp.api.registry.lookup_plate", session=sa, params={"estate": "EST-00001", "plate": "ZZ1001-26"})[1]
     assert ra.json()["message"]["match"] == "resident_vehicle"
     rb = call(B, "GET", "/api/method/frappe_cpcp.api.registry.lookup_plate", session=sb, params={"estate": "EST-00001", "plate": "ZZ1001-26"})[1]

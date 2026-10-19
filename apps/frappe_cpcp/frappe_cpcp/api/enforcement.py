@@ -33,7 +33,7 @@ def _gate(name: str):
 
 def _inc(name: str) -> dict:
     row = frappe.db.get_value("CPCP Violation Incident", name,
-                              ["name", "estate", "status", "classification", "policy_version", "verified_by", "responsible_unit"], as_dict=True)
+                              ["name", "estate", "status", "classification", "policy_version", "verified_by", "responsible_unit", "assigned_officer"], as_dict=True)
     if not row:
         raise frappe.PermissionError("not permitted")
     return row
@@ -78,7 +78,7 @@ def _view(a) -> dict:
 @deadlock_retry
 def propose_action(incident: str, action_type: str, reason: str) -> dict:
     inc = _inc(incident)
-    actor = authorize("execute_enforcement", "C", estate=inc["estate"], assigned_to=inc["verified_by"])
+    actor = authorize("execute_enforcement", "C", estate=inc["estate"], assigned_to=inc["assigned_officer"])
     if action_type not in ("Clamp", "Tow", "Cancel", "Release"):
         frappe.throw("Unknown action", frappe.ValidationError)
     if not (reason or "").strip():
@@ -143,7 +143,7 @@ def approve_action(action: str) -> dict:
 def execute_action(action: str, provider_ref: str | None = None, provider_amount: float | None = None) -> dict:
     a = frappe.get_doc("CPCP Enforcement Action", action)
     inc = _inc(a.incident)
-    actor = authorize("execute_enforcement", "U", estate=inc["estate"], assigned_to=inc["verified_by"])
+    actor = authorize("execute_enforcement", "U", estate=inc["estate"], assigned_to=inc["assigned_officer"])
     if a.status != "Approved":
         frappe.throw("Only approved actions can be executed", frappe.ValidationError)
     f = flags()
@@ -177,7 +177,7 @@ def execute_action(action: str, provider_ref: str | None = None, provider_amount
 def record_yard_arrival(action: str) -> dict:
     a = frappe.get_doc("CPCP Enforcement Action", action)
     inc = _inc(a.incident)
-    authorize("execute_enforcement", "U", estate=inc["estate"], assigned_to=inc["verified_by"])
+    authorize("execute_enforcement", "U", estate=inc["estate"], assigned_to=inc["assigned_officer"])
     if a.action_type != "Tow" or a.status != "Executed":
         frappe.throw("Only an executed tow can have a yard arrival", frappe.ValidationError)
     if a.yard_arrival_at:
@@ -195,7 +195,7 @@ def release_vehicle(action: str) -> dict:
     Storage is computed from verified yard arrival to this release, only if impound charging is enabled."""
     a = frappe.get_doc("CPCP Enforcement Action", action)
     inc = _inc(a.incident)
-    actor = authorize("execute_enforcement", "U", estate=inc["estate"], assigned_to=inc["verified_by"])
+    actor = authorize("execute_enforcement", "U", estate=inc["estate"], assigned_to=inc["assigned_officer"])
     if a.status != "Executed" or a.action_type not in ("Clamp", "Tow"):
         frappe.throw("Only an executed clamp or tow can be released", frappe.ValidationError)
     if a.release_at:

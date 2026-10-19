@@ -18,6 +18,16 @@
   "security_desk_number",
   "claim_lease_hours",
   "repeat_window_days",
+  "plate_lookups_per_hour",
+  "bare_suggestions_per_hour",
+  "shift_max_hours",
+  "emergency_max_minutes",
+  "suggestion_limit_per_hour",
+  "access_log_retention_days",
+  "ar_distinct_units_per_hour",
+  "ar_repeat_unit_per_day",
+  "ar_denied_per_hour",
+  "ar_suggestions_per_hour",
   "anonymous_label_verified",
   "sb_flags",
   "legal_approval_reference",
@@ -115,6 +125,73 @@
    "label": "Repeat Window Days",
    "default": "365",
    "description": "Window for counting distinct verified episodes as repeats."
+  },
+  {
+   "fieldname": "plate_lookups_per_hour",
+   "fieldtype": "Int",
+   "label": "Plate Lookups Per Hour",
+   "default": "60",
+   "description": "Gate plate lookups per officer per hour (hard ceiling)."
+  },
+  {
+   "fieldname": "bare_suggestions_per_hour",
+   "fieldtype": "Int",
+   "label": "Bare Suggestions Per Hour",
+   "default": "10",
+   "description": "Unit lookups WITHOUT a plate hint per officer per hour (stricter: the shape of a browsing attack)."
+  },
+  {
+   "fieldname": "shift_max_hours",
+   "fieldtype": "Int",
+   "label": "Shift Max Hours",
+   "default": "14",
+   "description": "A gate shift expires on the server after this long."
+  },
+  {
+   "fieldname": "emergency_max_minutes",
+   "fieldtype": "Int",
+   "label": "Emergency Max Minutes",
+   "default": "60"
+  },
+  {
+   "fieldname": "suggestion_limit_per_hour",
+   "fieldtype": "Int",
+   "label": "Suggestion Limit Per Hour",
+   "default": "30",
+   "description": "Returning-visitor suggestion lookups per officer per hour (hard ceiling)."
+  },
+  {
+   "fieldname": "access_log_retention_days",
+   "fieldtype": "Int",
+   "label": "Access Log Retention Days",
+   "default": "730",
+   "description": "Sensitive-access journal retention; purge is a scheduled, summarised, audited job."
+  },
+  {
+   "fieldname": "ar_distinct_units_per_hour",
+   "fieldtype": "Int",
+   "label": "Ar Distinct Units Per Hour",
+   "default": "12",
+   "description": "Review signal: distinct households touched in one hour."
+  },
+  {
+   "fieldname": "ar_repeat_unit_per_day",
+   "fieldtype": "Int",
+   "label": "Ar Repeat Unit Per Day",
+   "default": "4",
+   "description": "Review signal: repeated lookups of one household without a case or visit."
+  },
+  {
+   "fieldname": "ar_denied_per_hour",
+   "fieldtype": "Int",
+   "label": "Ar Denied Per Hour",
+   "default": "5"
+  },
+  {
+   "fieldname": "ar_suggestions_per_hour",
+   "fieldtype": "Int",
+   "label": "Ar Suggestions Per Hour",
+   "default": "20"
   },
   {
    "fieldname": "anonymous_label_verified",

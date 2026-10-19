@@ -35,12 +35,21 @@ class TestCPCP(FrappeTestCase):
         cls.seed = setup.seed_demo("a")
         cls.estate = next(iter(cls.seed["estates"].values()))["name"]
         cls.gate = next(iter(cls.seed["estates"].values()))["gate"]
+        from frappe_cpcp.api import duty
+        for who in ("officer", "officer2"):  # PRD v1.8: gate work needs a live shift
+            frappe.set_user(f"{who}@demo-a.example.invalid")
+            duty.start_shift(cls.estate, cls.gate, f"test-device-{who}")
+        frappe.set_user("Administrator")
+        for f in ("bare_suggestions_per_hour", "suggestion_limit_per_hour", "plate_lookups_per_hour"):  # journal-based limits persist across runs; tests raise them
+            frappe.db.set_single_value("CPCP Settings", f, 100000)
         frappe.db.set_single_value("CPCP Settings", "allegation_rate_limit_per_hour", 100000)  # the limiter is covered by its own behaviour; tests file many reports
 
     @classmethod
     def tearDownClass(cls):
         frappe.set_user("Administrator")
         frappe.db.set_single_value("CPCP Settings", "allegation_rate_limit_per_hour", 10)
+        for f, v in (("bare_suggestions_per_hour", 10), ("suggestion_limit_per_hour", 30), ("plate_lookups_per_hour", 60)):
+            frappe.db.set_single_value("CPCP Settings", f, v)
         super().tearDownClass()
 
     def tearDown(self):
@@ -76,17 +85,21 @@ class TestCPCP(FrappeTestCase):
         self.assertNotIn("visitor_log", nav)
         self.assertIn("submit_report", nav)
         as_user("officer")
-        self.assertIn("visitor_log", session.whoami()["navigation"])
+        nav_officer = session.whoami()["navigation"]
+        self.assertIn("gate_operations", nav_officer)
+        self.assertNotIn("visitor_log", nav_officer)  # PRD v1.8: no registry or visitor-log browsing for officers
+        self.assertNotIn("resident_registry", nav_officer)
 
     # ---- AC-03 / AC-37: officer lookup is minimal and logged -----------------------------------
     def test_officer_lookup_minimal_and_logged(self):
         as_user("officer")
-        before = frappe.db.count("CPCP Sensitive Access Event")
+        from frappe_cpcp.services import access
+        before = access.query("select count(*) n from `tabCPCP Sensitive Access Event`")[0]["n"]
         r = registry.lookup_plate(self.estate, "zz1001-26")
         self.assertEqual(r["match"], "resident_vehicle")
         self.assertEqual(r["unit"], "A1")
         self.assertFalse({"phone", "name", "full_name", "email"} & set(r) | {"phone", "name"} & set(r.get("vehicle", {})))
-        self.assertGreater(frappe.db.count("CPCP Sensitive Access Event"), before)
+        self.assertGreater(access.query("select count(*) n from `tabCPCP Sensitive Access Event`")[0]["n"], before)
         self.assertEqual(registry.lookup_plate(self.estate, "QQ9999")["match"], "none")
 
     def test_officer_cannot_reach_other_estate(self):
@@ -95,7 +108,8 @@ class TestCPCP(FrappeTestCase):
         as_user("officer")
         with self.assertRaises(frappe.PermissionError):
             registry.lookup_plate(other, "ZZ1001-26")
-        denied = frappe.get_all("CPCP Sensitive Access Event", filters={"result": "Denied", "estate": other})
+        from frappe_cpcp.services import access
+        denied = access.query("select name from `tabCPCP Sensitive Access Event` where result='Denied' and estate=%s", (other,))
         self.assertTrue(denied)
 
     # ---- visitors: AC-04, AC-101, AC-102, AC-105, AC-106 ---------------------------------------

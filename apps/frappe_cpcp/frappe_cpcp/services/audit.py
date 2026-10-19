@@ -2,7 +2,6 @@
 """Write-side of the tamper-evident audit chain and the sensitive-access log."""
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime, timezone
 
 import frappe
@@ -46,14 +45,3 @@ def verify_audit_chain() -> tuple[bool, int | None]:
                                   "at_utc", "request_id", "reason", "detail_hash"])
     chain = [auditchain.AuditRecord(**{k: (r[k] if r[k] is not None else "") for k in r}) for r in rows]
     return auditchain.verify(chain)
-
-
-def log_sensitive_access(*, record_type: str, record_id: str = "", estate: str = "", context: str = "",
-                         result: str = "Allowed", search_term: str | None = None, actor: str | None = None,
-                         role: str = "") -> None:
-    term_hash = hashlib.sha256(search_term.encode()).hexdigest() if search_term else ""
-    frappe.get_doc({
-        "doctype": "CPCP Sensitive Access Event", "actor": actor or frappe.session.user, "role": role, "estate": estate,
-        "record_type": record_type, "record_id": record_id, "context": context, "result": result,
-        "request_id": request_id(), "at_utc": _now_iso(), "search_term_hash": term_hash,
-    }).insert(ignore_permissions=True)

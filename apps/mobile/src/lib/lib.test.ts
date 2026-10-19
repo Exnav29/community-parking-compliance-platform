@@ -95,3 +95,27 @@ describe("api client", () => {
     expect(init?.credentials).toBe("include");
   });
 });
+
+describe("PBAC-18 offline privacy", () => {
+  it("refuses directory-type or personal data in a draft", async () => {
+    const q = new OfflineQueue(memStore(), "org-a");
+    for (const key of ["name", "phone", "contacts", "residents", "members", "history", "candidates", "email", "household", "directory"]) {
+      await expect(q.enqueue("visitor_check_in", { plate: "AB12", [key]: "x" })).rejects.toThrow(/cannot be stored/);
+    }
+    await expect(q.enqueue("visitor_check_in", { plate: "AB12", host_unit_label: "A1" })).resolves.toBeTruthy();
+  });
+  it("expires unsent drafts and removes them from storage", async () => {
+    const s = memStore();
+    const q = new OfflineQueue(s, "org-a");
+    await q.enqueue("visitor_check_in", { plate: "AB12" }, new Date(Date.now() - 80 * 3600 * 1000)); // 80 h old
+    expect(await q.list()).toEqual([]);
+    expect(JSON.parse(s.data.get("cpcp.queue.org-a") ?? "[]")).toEqual([]);
+  });
+  it("keeps one namespace per organization and wipes on sign-out", async () => {
+    const s = memStore();
+    await new OfflineQueue(s, "org-a").enqueue("visitor_check_in", { plate: "AB12" });
+    expect(await new OfflineQueue(s, "org-b").list()).toEqual([]);
+    await new OfflineQueue(s, "org-a").wipe();
+    expect(s.data.size).toBe(0);
+  });
+});

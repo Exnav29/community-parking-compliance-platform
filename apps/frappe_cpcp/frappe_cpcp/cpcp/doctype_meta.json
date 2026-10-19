@@ -3,6 +3,10 @@
   "append_only": false,
   "sensitivity": "STAFF_OPERATIONAL"
  },
+ "CPCP Access Review Flag": {
+  "append_only": false,
+  "sensitivity": "IMMUTABLE_AUDIT"
+ },
  "CPCP Allegation Receipt": {
   "append_only": true,
   "sensitivity": "STAFF_OPERATIONAL"
@@ -27,6 +31,14 @@
   "append_only": true,
   "sensitivity": "RESTRICTED_EVIDENCE"
  },
+ "CPCP Device Registration": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Emergency Access": {
+  "append_only": false,
+  "sensitivity": "IMMUTABLE_AUDIT"
+ },
  "CPCP Enforcement Action": {
   "append_only": false,
   "sensitivity": "RESTRICTED_EVIDENCE"
@@ -36,6 +48,10 @@
   "sensitivity": "STAFF_OPERATIONAL"
  },
  "CPCP Gate": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
+ "CPCP Gate Shift": {
   "append_only": false,
   "sensitivity": "STAFF_OPERATIONAL"
  },

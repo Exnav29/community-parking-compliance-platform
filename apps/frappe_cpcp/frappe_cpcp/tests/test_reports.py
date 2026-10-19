@@ -25,6 +25,12 @@ class TestReports(FrappeTestCase):
         frappe.db.sql("delete from `tabCPCP Role Assignment` where user in (%s, %s)", (f"finance@{DOM}", f"auditor@{DOM}"))
         cls.seed = setup.seed_demo("a")
         cls.estate = next(iter(cls.seed["estates"].values()))["name"]
+        cls.gate = next(iter(cls.seed["estates"].values()))["gate"]
+        from frappe_cpcp.api import duty
+        for who in ("officer", "officer2"):  # PRD v1.8: gate work needs a live shift
+            frappe.set_user(f"{who}@demo-a.example.invalid")
+            duty.start_shift(cls.estate, cls.gate, f"test-device-{who}")
+        frappe.set_user("Administrator")
         frappe.db.set_single_value("CPCP Settings", "allegation_rate_limit_per_hour", 10000)
         # a handful of verified incidents at varied pins plus one unverified allegation (AC-13 seed, scaled down)
         for i in range(6):

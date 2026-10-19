@@ -134,7 +134,8 @@ def _outbox(work_ref: str, users: list[tuple[str, str]], kind: str, key_part: st
         if frappe.db.exists("CPCP Notification Outbox", {"idempotency_key": key}):
             continue
         is_wi = bool(frappe.db.exists("CPCP Security Work Item", work_ref))
-        frappe.get_doc({"doctype": "CPCP Notification Outbox", "work_item": work_ref if is_wi else None, "incident": None if is_wi else work_ref,
+        is_inc = (not is_wi) and bool(frappe.db.exists("CPCP Violation Incident", work_ref))
+        frappe.get_doc({"doctype": "CPCP Notification Outbox", "work_item": work_ref if is_wi else None, "incident": work_ref if is_inc else None, "ref": work_ref,
                         "recipient_user": user, "recipient_role": role, "channel": "in_app", "status": "Pending", "idempotency_key": key,
                         "payload_minimal": frappe.as_json({"kind": kind, **payload})}).insert(ignore_permissions=True)  # no reporter, plate, photo or address
 
