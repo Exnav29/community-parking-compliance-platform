@@ -20,7 +20,7 @@ accounting and appeals. **The goal is voluntary compliance and safe access, not 
 | Desktop management console, map/finance screens | Not started |
 
 See [docs/STATUS.md](docs/STATUS.md) for verified results and blockers, and
-[docs/spec/PRD_v1.7.md](docs/spec/PRD_v1.7.md) for the specification.
+[docs/spec/PRD_v1.8.md](docs/spec/PRD_v1.8.md) for the specification.
 
 ## Architecture in brief
 One isolated Frappe site (own database, files, backups) **per subscribing organization**; one or more estates
