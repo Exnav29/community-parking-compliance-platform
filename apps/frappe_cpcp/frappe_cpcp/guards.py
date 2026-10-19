@@ -27,13 +27,13 @@ SENSITIVE_DOCTYPES = {
     "CPCP Communication Attempt", "CPCP Communication Event", "CPCP Officer Evidence", "CPCP Parking Allegation", "CPCP Allegation Receipt",
     "CPCP Allegation Review Event", "CPCP Warning Notice", "CPCP Enforcement Action", "CPCP Incident Charge", "CPCP Appeal",
     "CPCP Sensitive Access Event", "CPCP Access Review Flag", "CPCP Emergency Access", "CPCP Gate Shift", "CPCP Device Registration",
-    "CPCP Audit Event", "CPCP Access Grant", "CPCP Role Assignment",
+    "CPCP Audit Event", "CPCP Access Grant", "CPCP Role Assignment", "CPCP Allegation Attachment",
 }
 CATEGORY = {
     "CPCP Person": "sensitive_personal", "CPCP Unit Membership": "sensitive_personal", "CPCP Vehicle": "sensitive_personal",
     "CPCP Vehicle Unit Association": "sensitive_personal", "CPCP Visitor Session": "restricted_safety", "CPCP Visit Event": "restricted_safety",
     "CPCP Communication Attempt": "contact_reveal", "CPCP Communication Event": "restricted_legal", "CPCP Officer Evidence": "restricted_legal",
-    "CPCP Parking Allegation": "restricted_safety", "CPCP Allegation Receipt": "restricted_safety", "CPCP Allegation Review Event": "restricted_safety",
+    "CPCP Parking Allegation": "restricted_safety", "CPCP Allegation Attachment": "restricted_safety", "CPCP Allegation Receipt": "restricted_safety", "CPCP Allegation Review Event": "restricted_safety",
 }
 READ_ROLES = {"org_admin", "estate_manager", "security_manager"}
 BLOCKED_ACTIONS = ("export", "print", "pdf", "email", "share", "download")

@@ -18,6 +18,7 @@ from frappe_cpcp.core.plates import normalize_plate
 from frappe_cpcp.permissions import authorize, get_actor
 from frappe_cpcp.services import episodes as svc
 from frappe_cpcp.services import access as access_svc
+from frappe_cpcp.services import photos as photo_svc
 from frappe_cpcp.services import pbac as pb
 from frappe_cpcp.services.audit import log_audit
 from frappe_cpcp.services.common import deadlock_retry, active_policy, age_minutes, iso, require, to_db, utcnow
@@ -86,7 +87,7 @@ def _check_rate(user: str) -> None:
 @deadlock_retry
 def submit_identified(estate: str, category: str, narrative: str, client_uuid: str, plate_text: str | None = None,
                       latitude=None, longitude=None, accuracy_m=None, location_source: str | None = None,
-                      zone: str | None = None, urgent: int = 0) -> dict:
+                      zone: str | None = None, urgent: int = 0, photos_base64: str | None = None) -> dict:
     """Identified report: the authenticated reporter and unit are kept in restricted metadata."""
     actor = authorize("submit_report", "C", estate=estate)
     require(client_uuid, "client_uuid")
@@ -97,6 +98,8 @@ def submit_identified(estate: str, category: str, narrative: str, client_uuid: s
         return {"replayed": True, "reference": prior.name}
     _check_rate(actor.user)
     narrative, lat, lon, acc, src = _validate_common(estate, category, narrative, latitude, longitude, accuracy_m, location_source)
+    raws = photo_svc.decode_list(photos_base64)
+    [photo_svc.sanitize(r) for r in raws]  # fail BEFORE anything is written if any photo is unacceptable
     unit = next(iter(actor.unit_ids), None) if actor.role.value == "resident" else None
     doc, _routing = _create_allegation(estate=estate, mode="Identified", category=category, narrative=narrative, plate_text=plate_text,
                                        lat=lat, lon=lon, accuracy=acc, source=src, zone=zone, urgent=cint(urgent), client_uuid=client_uuid,
@@ -104,6 +107,8 @@ def submit_identified(estate: str, category: str, narrative: str, client_uuid: s
     if doc is None:  # the same client operation arrived twice at once: first writer wins, this one is a replay
         prior = frappe.db.sql("select name from `tabCPCP Parking Allegation` where client_uuid=%s for update", (client_uuid,))
         return {"replayed": True, "reference": prior[0][0] if prior else None}
+    if raws:
+        photo_svc.store(doc.name, raws, source_mode="Identified")
     log_audit(action="allegation_submitted", entity="CPCP Parking Allegation", entity_id=doc.name, role=actor.role.value,
               detail={"mode": "Identified"})
     return {"replayed": False, "reference": doc.name, "status": al.reporter_status(al.State.RECEIVED),
@@ -121,7 +126,7 @@ def _cache_counter(key: str, ttl: int) -> int:
 @deadlock_retry
 def submit_anonymous(estate: str, community_code: str, category: str, narrative: str, plate_text: str | None = None,
                      latitude=None, longitude=None, accuracy_m=None, location_source: str | None = None,
-                     zone: str | None = None, urgent: int = 0, client_uuid: str | None = None) -> dict:
+                     zone: str | None = None, urgent: int = 0, client_uuid: str | None = None, photos_base64: str | None = None) -> dict:
     """Identity-unlinked intake. Deliberately does NOT read frappe.session.user, headers, IP or device data.
 
     Estate selection uses a rotating association-wide community code, never a resident login. Abuse control is a
@@ -142,6 +147,8 @@ def submit_anonymous(estate: str, community_code: str, category: str, narrative:
         frappe.throw("This intake is busy; please try again later", frappe.TooManyRequestsError)
     narrative, lat, lon, acc, src = _validate_common(estate, category, narrative, latitude, longitude, accuracy_m, location_source)
     cu = client_uuid or uuid.uuid4().hex
+    raws = photo_svc.decode_list(photos_base64)
+    [photo_svc.sanitize(r) for r in raws]  # EXIF and every other embedded identifier is removed before persistence
     prior = frappe.db.get_value("CPCP Parking Allegation", {"client_uuid": cu}, "name")
     if prior:
         return {"replayed": True, "note": "Already received. The one-time secret cannot be shown again."}
@@ -152,6 +159,8 @@ def submit_anonymous(estate: str, community_code: str, category: str, narrative:
     if doc is None:
         return {"replayed": True, "note": "Already received. The one-time secret cannot be shown again."}
     al.assert_anonymous_clean(doc.as_dict())
+    if raws:
+        photo_svc.store(doc.name, raws, source_mode="Anonymous")
     frappe.get_doc({"doctype": "CPCP Allegation Receipt", "receipt_id": receipt.receipt_id, "allegation": doc.name,
                     "salt": receipt.salt, "verifier": receipt.verifier}).insert(ignore_permissions=True)
     log_audit(action="allegation_submitted", entity="CPCP Parking Allegation", entity_id=doc.name, role="anonymous",
@@ -337,9 +346,7 @@ def _store_evidence_photo(b64: str | None, name: str | None, claimed_sha256: str
     digest = hashlib.sha256(raw).hexdigest()
     if claimed_sha256 and claimed_sha256.lower() != digest:
         frappe.throw("Photo integrity check failed (hash mismatch); capture it again", frappe.ValidationError)
-    from frappe.utils.file_manager import save_file
-
-    f = save_file(f"evidence-{digest[:12]}.{ext}", raw, None, None, is_private=1)
+    f = photo_svc.private_file(f"evidence-{digest[:12]}.{ext}", raw)
     return digest, f.file_url
 
 
@@ -440,3 +447,17 @@ def close_allegation(allegation: str, outcome: str, reason: str) -> dict:
     frappe.db.set_value("CPCP Security Work Item", wi_name, {"status": "Closed", "cluster_key": None}, update_modified=False)
     log_audit(action="allegation_closed", entity="CPCP Parking Allegation", entity_id=allegation, reason=reason, role=actor.role.value)
     return {"allegation": allegation, "state": outcomes[outcome].value, "reports_closed": len(members)}
+
+
+@frappe.whitelist()
+def allegation_photos(allegation: str) -> list[dict]:
+    """The reporter's (sanitized) photos, for the officer who is assigned to the report and on duty. Journaled on every read."""
+    a = frappe.db.get_value("CPCP Parking Allegation", allegation, ["estate"], as_dict=True)
+    if not a:
+        raise frappe.PermissionError("not permitted")
+    actor = authorize("triage_reports", "R", estate=a.estate, assigned_to=_assignee_for(allegation))
+    ctx = pb.duty_check(actor, a.estate, action="view", record_type="Allegation Photo", category="restricted_safety")
+    ctx.purpose_ref = allegation
+    out = [photo_svc.read_clean(n) for n in frappe.get_all("CPCP Allegation Attachment", filters={"allegation": allegation}, order_by="creation asc", pluck="name")]
+    ctx.allowed(record_id=allegation, context=f"{len(out)} photos")
+    return out

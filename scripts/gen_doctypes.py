@@ -180,6 +180,12 @@ DOCTYPES: list[dict] = [
          perms=[perm(R_ADMIN, "r"), perm(R_SECM, "r"), perm(R_OFF, "r"), perm(R_AUD),
                 perm(R_SECM, "r", 1)]),
 
+    dict(name="CPCP Allegation Attachment", autoname="format:ATT-{#####}", append_only=True, sensitivity="RESTRICTED_EVIDENCE",
+         desc="A resident photo, stored ONLY after metadata stripping. No Desk access for officers; read through a purpose-checked API.",
+         fields=[F("allegation", "Link", options="CPCP Parking Allegation", reqd=1, search_index=1), F("file_url", reqd=1), F("sha256", reqd=1),
+                 F("width", "Int"), F("height", "Int"), F("bytes", "Int"), F("source_mode"), F("created_at", "Datetime")],
+         perms=[perm(R_ADMIN)]),
+
     dict(name="CPCP Allegation Receipt", autoname="hash", append_only=True,
          fields=[F("receipt_id", reqd=1, unique=1), F("allegation", "Link", options="CPCP Parking Allegation"),
                  F("salt", reqd=1), F("verifier", reqd=1)],

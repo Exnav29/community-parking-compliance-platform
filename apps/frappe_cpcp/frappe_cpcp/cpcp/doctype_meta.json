@@ -7,6 +7,10 @@
   "append_only": false,
   "sensitivity": "IMMUTABLE_AUDIT"
  },
+ "CPCP Allegation Attachment": {
+  "append_only": true,
+  "sensitivity": "RESTRICTED_EVIDENCE"
+ },
  "CPCP Allegation Receipt": {
   "append_only": true,
   "sensitivity": "STAFF_OPERATIONAL"

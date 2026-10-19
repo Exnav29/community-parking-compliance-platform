@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import MapPin, { type Pin } from "../components/MapPin";
 import { Big, Chip, Screen } from "../components/ui";
-import { captureLocation } from "../lib/device";
+import { captureLocation, takePhoto } from "../lib/device";
 import { uuid, type Ctx } from "../lib/types";
 
 const CATEGORIES = ["Gate or driveway blocked", "Roadway obstruction", "Unsafe parking", "Unauthorized space", "Emergency access", "Other"];
@@ -17,6 +17,7 @@ export function Concern({ c }: { c: Ctx }) {
   const [pin, setPin] = useState<Pin | null>(null);
   const [acc, setAcc] = useState<number | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ dataUrl: string; base64: string } | null>(null);
   const boundary = c.estate.boundary?.coordinates ?? null;
 
   async function here() {
@@ -28,10 +29,10 @@ export function Concern({ c }: { c: Ctx }) {
     const loc = pin ? { latitude: pin.lat, longitude: pin.lon, accuracy_m: acc ?? undefined, location_source: acc != null ? "device" : "manual_pin" } : {};
     try {
       if (mode === "identified") {
-        const r = await c.client.post("allegations.submit_identified", { estate: c.estate.estate, category: cat, narrative: narr, plate_text: plate || undefined, urgent: urgent ? 1 : 0, client_uuid: uuid(), ...loc });
+        const r = await c.client.post("allegations.submit_identified", { estate: c.estate.estate, category: cat, narrative: narr, plate_text: plate || undefined, urgent: urgent ? 1 : 0, client_uuid: uuid(), ...(photo ? { photos_base64: JSON.stringify([photo.base64]) } : {}), ...loc });
         setResult(`Sent. Your reference is ${r.reference}. Security will check it. This does not start any fine or warning.`);
       } else {
-        const r = await c.client.submitAnonymous({ estate: c.estate.estate, community_code: code, category: cat, narrative: narr, plate_text: plate || undefined, urgent: urgent ? 1 : 0, ...loc });
+        const r = await c.client.submitAnonymous({ estate: c.estate.estate, community_code: code, category: cat, narrative: narr, plate_text: plate || undefined, urgent: urgent ? 1 : 0, ...(photo ? { photos_base64: JSON.stringify([photo.base64]) } : {}), ...loc });
         setResult(`Sent. SAVE THIS NOW - it is shown once.\nReceipt: ${r.receipt_id}\nSecret: ${r.secret}\nWithout it, nobody can show you the status or contact you.`);
       }
     } catch (e) { c.toast((e as Error).message); }
@@ -52,6 +53,9 @@ export function Concern({ c }: { c: Ctx }) {
       <label>Number plate, if you can read it (optional)<input value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} /></label>
       <Big icon="(+)" label="Mark where the vehicle is" hint="Uses your location once, only when you tap" onClick={here} />
       {pin && <MapPin pin={pin} onChange={(p) => { setPin(p); setAcc(null); }} boundary={boundary} />}
+      <Big icon="[o]" label={photo ? "Replace photo" : "Add a photo (optional)"} hint="Taken with the camera, only when you tap" onClick={async () => setPhoto(await takePhoto())} />
+      {photo && <img src={photo.dataUrl} alt="Your photo" className="thumb" />}
+      <p className="hint">Location and camera details are removed from your photo before it is saved. People, cars, doors and buildings in the picture can still show who you are{mode === "anonymous" ? " - think before sending it with an anonymous report" : ""}.</p>
       <label className="row"><input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} /> It blocks emergency access</label>
       {urgent && <p className="notice">In an emergency call estate security now. This app cannot promise a fast response.</p>}
       {mode === "anonymous" && <label>Community code (from your association notice board)<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} /></label>}

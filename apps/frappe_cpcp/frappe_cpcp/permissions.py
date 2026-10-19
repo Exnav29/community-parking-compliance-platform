@@ -29,7 +29,7 @@ DOCTYPE_CAPABILITY = {
     "CPCP Violation Incident": "incident_reports", "CPCP Officer Evidence": "capture_evidence",
     "CPCP Audit Event": "audit_history", "CPCP Sensitive Access Event": "access_review", "CPCP Access Review Flag": "access_review",
     "CPCP Emergency Access": "emergency_access", "CPCP Gate Shift": "gate_operations", "CPCP Device Registration": "gate_operations",
-    "CPCP Work Item Allegation": "triage_reports",
+    "CPCP Work Item Allegation": "triage_reports", "CPCP Allegation Attachment": "triage_reports",
     "CPCP Communication Attempt": "contact_responsible", "CPCP Communication Event": "contact_responsible",
     "CPCP Warning Notice": "issue_warning", "CPCP Enforcement Action": "execute_enforcement",
     "CPCP Incident Charge": "charge_ledger", "CPCP Appeal": "submit_appeal",
@@ -52,7 +52,7 @@ PTYPE_LETTER = {"read": "R", "select": "R", "report": "R", "print": "R", "write"
 OFFICER_DENIED = {
     "CPCP Person", "CPCP Unit Membership", "CPCP Vehicle", "CPCP Vehicle Unit Association", "CPCP Visitor Session", "CPCP Visit Event",
     "CPCP Communication Attempt", "CPCP Communication Event", "CPCP Officer Evidence", "CPCP Sensitive Access Event", "CPCP Access Review Flag",
-    "CPCP Emergency Access", "CPCP Gate Shift", "CPCP Device Registration", "CPCP Allegation Receipt",
+    "CPCP Emergency Access", "CPCP Gate Shift", "CPCP Device Registration", "CPCP Allegation Receipt", "CPCP Allegation Attachment",
 }
 NO_BULK = OFFICER_DENIED | {"CPCP Parking Allegation", "CPCP Allegation Review Event"}
 

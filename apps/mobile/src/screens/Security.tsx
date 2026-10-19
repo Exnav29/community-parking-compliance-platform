@@ -45,9 +45,12 @@ export function Verify({ c, allegation }: { c: Ctx; allegation: string }) {
   const [reason, setReason] = useState("");
   const [emergency, setEmergency] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rphotos, setRphotos] = useState<{ attachment: string; data_url: string }[]>([]);
   const boundary = c.estate.boundary?.coordinates ?? null;
 
   useEffect(() => { c.client.get("allegations.open_allegation", { allegation }).then((r) => { setA(r); setPlate(r.alleged_plate_text ?? ""); }).catch(() => c.toast("Cannot open report")); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  useEffect(() => { c.client.get("allegations.allegation_photos", { allegation }).then(setRphotos).catch(() => setRphotos([])); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   async function locate() {
     const f = await captureLocation();
@@ -86,6 +89,7 @@ export function Verify({ c, allegation }: { c: Ctx; allegation: string }) {
     <Screen title="Check and verify" onBack={() => c.go("queue")}>
       <div className="card"><span className="badge">{a.label}</span><strong>{a.category}</strong><p>{a.narrative}</p>
         {a.location.lat != null && <small>Reporter's pin: {a.location.lat?.toFixed(5)}, {a.location.lon?.toFixed(5)} (not verified)</small>}</div>
+      {rphotos.length > 0 && <div><small>Reporter's photos (unverified, location data removed)</small><div className="chips">{rphotos.map((x) => <img key={x.attachment} src={x.data_url} alt="Reporter photo" className="thumb" style={{ maxWidth: 140 }} />)}</div></div>}
       <label>Plate you see<input value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} autoCapitalize="characters" /></label>
       <Big icon="[o]" label={photo ? "Retake photo" : "Take photo"} onClick={async () => setPhoto(await takePhoto())} />
       {photo && <img src={photo.dataUrl} alt="Evidence preview" className="thumb" />}
