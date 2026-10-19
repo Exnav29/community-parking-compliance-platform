@@ -9,10 +9,11 @@ Updated 2026-10-19.
 
 - Frappe v15.123.1 dev stack with two sites (`org-a.localhost`, `org-b.localhost`); app installs, all 24 DocTypes import.
 - **21 Frappe integration tests pass** on org-a (`bench --site org-a.localhost run-tests --app frappe_cpcp --module frappe_cpcp.tests.test_integration`): resident denied registry/visitor log (UI hooks, list, API), officer lookup minimal + logged, other-estate denial, visit lifecycle/idempotency/re-entry, anonymous intake without correlators + receipt, claim race, verify-and-create (separate incident, duplicate allegations join one incident), append-only + audit chain, expired/multi-role handling.
+- **Cross-tenant HTTP isolation: 8 tests pass** (`tests/tenant-isolation`; needs `bash infra/dev/seed.sh` + `serve.sh`): session-cookie replay and Host-header swap against the other site fail, same plate resolves to each tenant's own unit, guests read nothing, different policies per tenant (15 min vs 10 min).
 - CI on GitHub passes (core tests, lint, DocType regeneration check, secret scan).
 
 ## Not yet verified (do not assume)
-- Cross-site HTTP isolation tests (next), backup/restore proof, mobile PoC, desktop UI.
+- Backup/restore proof, mobile PoC, desktop UI.
 
 ## Blockers
 - No JDK/Android SDK on the dev machine: native Android build must run in CI or after installing the SDK.

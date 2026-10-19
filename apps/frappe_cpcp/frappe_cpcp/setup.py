@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import os
 import secrets
 
 import frappe
@@ -49,6 +50,9 @@ def _user(email: str, first: str, pwd: str) -> str:
     if not frappe.db.exists("User", email):
         frappe.get_doc({"doctype": "User", "email": email, "first_name": first, "send_welcome_email": 0,
                         "new_password": pwd, "user_type": "System User", "enabled": 1}).insert(ignore_permissions=True)
+    elif os.environ.get(DEMO_PASSWORD_ENV):
+        from frappe.utils.password import update_password
+        update_password(email, pwd)
     return email
 
 
@@ -66,8 +70,6 @@ def _assign(user, role, estate=None, unit=None, approver="Administrator", valid_
 
 def seed_demo(profile: str = "a") -> dict:
     """Load a synthetic organization. Passwords come from the environment or are randomly generated and printed once."""
-    import os
-
     prof = PROFILES[profile]
     pwd = os.environ.get(DEMO_PASSWORD_ENV) or secrets.token_urlsafe(12)
     configure_org(prof["org_id"], prof["display_name"], currency=prof["currency"])
