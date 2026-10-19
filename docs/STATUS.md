@@ -5,7 +5,7 @@ Updated 2026-10-19 (second session).
 | Suite | Result |
 |---|---|
 | Core unit tests (pytest, no Frappe) | **88 passed** (includes the purpose rules in `core/pbac.py`) |
-| Frappe integration on org-a: integration 22, comms/enforcement 14, reports 6, dedup (AC-D01..D18) 19, **PBAC-01..20 + extras 22** | **83 passed** |
+| Frappe integration on org-a: integration 22, comms/enforcement 14, reports 6, dedup (AC-D01..D18) 19, PBAC-01..20 + extras 22, **resident photos 5** | **88 passed** |
 | Cross-tenant HTTP isolation (two sites) | **8 passed** |
 | **Privacy over HTTP** (`tests/privacy`: Desk/REST/search/print/export, forged purposes, journal visibility, cross-tenant journals, device revocation) | **16 passed** |
 | Parallel HTTP concurrency (6 scenarios; earlier repeated 40x = 240 runs with 0 failures) | **6 passed** |
@@ -63,6 +63,14 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 
 **Defects found by these tests and fixed:** (1) unique-index violations raise `UniqueValidationError`, not `DuplicateEntryError`, so race losers returned HTTP 500; (2) plain reads after a lost race used an older snapshot and missed the winner's rows (now locking reads); (3) a lock-order inversion between promotion and arriving reports caused InnoDB deadlocks (now ordered, plus bounded retry); (4) Frappe link validation used a plain read and could reject a just-committed allegation (internal inserts skip it after locking reads). Design: `docs/architecture/INCIDENT_LIFECYCLE.md`.
 
+### Other verified results
+| Item | Result |
+|---|---|
+| **Backup and restore** (`bash infra/dev/backup_restore_check.sh`): back up org-a with private files, restore into a NEW site, compare | **RESTORE VERIFIED**: 21 doctype counts, access-journal chain (2026 rows), audit chain (1895 rows), ledger totals and the SHA-256 digest of the private file are identical. See `docs/deployment/BACKUP_RESTORE.md` for what is NOT yet proven |
+| **Resident photos with EXIF stripping** | Fixture with EXIF GPS, camera make/model, timestamp, comment and a trailing script: none survive in the stored file; orientation applied; PNG alpha flattened; non-images, 7000x7000 bombs and a 4th photo rejected; a bad photo fails the whole report before any write; anonymous photos owned by Guest |
+| **SBOM + licence policy** | 188 components (backend environment + mobile production) checked; policy OK with 16 reasoned exceptions (`docs/legal/license-exceptions.json`; 8 of them are 'metadata missing' entries a maintainer should confirm before redistributing any built image) |
+| **Vulnerability scan** | npm production dependencies: **0 vulnerabilities**. **Python packages inside Frappe's pinned tree have OPEN advisories** (pyjwt, werkzeug, oauthlib, pypdf, weasyprint, pdfkit): not fixed, not exploitable through CPCP's own paths as far as assessed, must be resolved before any pilot. See `docs/security/DEPENDENCY_FINDINGS.md` |
+
 ## Feature status
 | Area | State |
 |---|---|
@@ -80,13 +88,14 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 | GitHub CI (core tests, lint, DocType regeneration check, secret scan, web build, unsigned debug APK) | Passing at last push |
 | Desktop management console (including the Access Review dashboard UI) | Not started (APIs ready) |
 | Permission matrix (generated) and privacy/PBAC design docs | Done (`docs/security/`) |
-| Threat model document, SBOM / license CI, backup/restore proof, app-store compliance matrix | Not started |
+| Threat model, app-store compliance matrix, backup/restore procedure, dependency findings | Done (`docs/security/THREAT_MODEL.md`, `docs/deployment/`); store matrix is PREPARATION only |
+| SBOM + licence policy + audit + Dependabot in CI | Implemented (`supply-chain` job; workflow not yet seen running) |
+| Resident report photos with EXIF stripping | **Implemented and verified**; mobile screens updated, awaiting device validation |
 | Real SMS / voice / payment providers | Blocked: provider and authorization decisions |
 | iOS archive; physical-device tests | Blocked: need macOS and your phone |
 
 ## Known limits
 * Matching uses plate and location; OCR confidence and visit-session history are not yet inputs. Movement of a vehicle between prohibited spots is resolved by reviewer (`review_candidate`, merge).
-* Resident report photos (and EXIF stripping) are not implemented yet; officer evidence photos are.
 * The dev DB accumulates synthetic rows from the HTTP tests (unique plates per run).
 * The PWA/web build cannot persist offline drafts (by design); native only.
 
@@ -96,5 +105,5 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 
 ## Next
 1. Desktop management console (React web) including the Access Review dashboard and case review (merge/split).
-2. Threat model document, store-compliance matrix, SBOM and license CI, backup/restore proof, resident report photos with EXIF stripping.
+2. Resolve the open Python advisories in staging; account deletion flow; tenant export/offboarding; external penetration test and MASVS review (G5 in the threat model).
 3. Android device test with the owner; fix findings.

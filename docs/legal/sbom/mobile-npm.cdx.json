@@ -1,0 +1,1048 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "serialNumber": "urn:uuid:4086dc3e-573a-474c-b9f0-95c73685e8ef",
+  "metadata": {
+    "timestamp": "2026-10-19T15:57:29.980Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "npm",
+          "version": "11.12.1"
+        },
+        {
+          "type": "application",
+          "name": "cyclonedx-npm",
+          "group": "@cyclonedx",
+          "version": "6.0.1",
+          "author": "Jan Kowalleck",
+          "description": "Create CycloneDX Software Bill of Materials (SBOM) from NPM projects.",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "externalReferences": [
+            {
+              "url": "git+https://github.com/CycloneDX/cyclonedx-node-npm.git",
+              "type": "vcs",
+              "comment": "as detected from PackageJson property \"repository.url\""
+            },
+            {
+              "url": "https://github.com/CycloneDX/cyclonedx-node-npm#readme",
+              "type": "website",
+              "comment": "as detected from PackageJson property \"homepage\""
+            },
+            {
+              "url": "https://github.com/CycloneDX/cyclonedx-node-npm/issues",
+              "type": "issue-tracker",
+              "comment": "as detected from PackageJson property \"bugs.url\""
+            }
+          ],
+          "properties": [
+            {
+              "name": "cdx:npm:package:constraint:engine:node",
+              "value": ">=20.18.0"
+            },
+            {
+              "name": "cdx:npm:package:constraint:engine:npm",
+              "value": ">=9"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "name": "cyclonedx-library",
+          "group": "@cyclonedx",
+          "version": "10.3.0",
+          "author": "Jan Kowalleck",
+          "description": "Core functionality of CycloneDX for JavaScript (Node.js or WebBrowser).",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "externalReferences": [
+            {
+              "url": "git+https://github.com/CycloneDX/cyclonedx-javascript-library.git",
+              "type": "vcs",
+              "comment": "as detected from PackageJson property \"repository.url\""
+            },
+            {
+              "url": "https://github.com/CycloneDX/cyclonedx-javascript-library#readme",
+              "type": "website",
+              "comment": "as detected from PackageJson property \"homepage\""
+            },
+            {
+              "url": "https://github.com/CycloneDX/cyclonedx-javascript-library/issues",
+              "type": "issue-tracker",
+              "comment": "as detected from PackageJson property \"bugs.url\""
+            }
+          ],
+          "properties": [
+            {
+              "name": "cdx:npm:package:constraint:engine:node",
+              "value": ">=20.18.0"
+            }
+          ]
+        }
+      ]
+    },
+    "component": {
+      "type": "application",
+      "name": "cpcp-mobile",
+      "version": "0.0.0",
+      "bom-ref": "cpcp-mobile@0.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/cpcp-mobile@0.0.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:private",
+          "value": "true"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": ""
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "capacitor-secure-storage",
+      "group": "@aparajita",
+      "version": "8.0.1",
+      "bom-ref": "cpcp-mobile@0.0.0|@aparajita/capacitor-secure-storage@8.0.1",
+      "author": "Aparajita Fishman",
+      "description": "Capacitor 8+ plugin that provides secure storage for the iOS and Android",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40aparajita/capacitor-secure-storage@8.0.1",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/aparajita/capacitor-secure-storage.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/aparajita/capacitor-secure-storage#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/aparajita/capacitor-secure-storage/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@aparajita/capacitor-secure-storage/-/capacitor-secure-storage-8.0.1.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:constraint:engine:node",
+          "value": ">=20.0.0"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@aparajita/capacitor-secure-storage"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "app",
+      "group": "@capacitor",
+      "version": "8.1.2",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/app@8.1.2",
+      "author": "Ionic",
+      "description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/app@8.1.2",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor-plugins.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-plugins#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-plugins/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/app/-/app-8.1.2.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/app"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "camera",
+      "group": "@capacitor",
+      "version": "8.2.6",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/camera@8.2.6",
+      "author": "Ionic",
+      "description": "The Camera API provides the ability to take a photo with the camera or choose an existing one from the photo album.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/camera@8.2.6",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor-camera.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-camera#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-camera/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/camera/-/camera-8.2.6.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/camera"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "core",
+      "group": "@capacitor",
+      "version": "8.5.3",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/core@8.5.3",
+      "author": "Ionic Team",
+      "description": "Capacitor: Cross-platform apps with JavaScript and the web",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/core@8.5.3",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://capacitorjs.com",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/core/-/core-8.5.3.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/core"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "geolocation",
+      "group": "@capacitor",
+      "version": "8.2.4",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/geolocation@8.2.4",
+      "author": "Outsystems",
+      "description": "The Geolocation API provides simple methods for getting and tracking the current position of the device using GPS, along with altitude, heading, and speed information if available.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/geolocation@8.2.4",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor-geolocation.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-geolocation#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-geolocation/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/geolocation/-/geolocation-8.2.4.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/geolocation"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "network",
+      "group": "@capacitor",
+      "version": "8.0.1",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/network@8.0.1",
+      "author": "Ionic",
+      "description": "The Network API provides network and connectivity information.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/network@8.0.1",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor-plugins.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-plugins#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-plugins/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/network/-/network-8.0.1.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/network"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "push-notifications",
+      "group": "@capacitor",
+      "version": "8.1.3",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/push-notifications@8.1.3",
+      "author": "Ionic",
+      "description": "The Push Notifications API provides access to native push notifications.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/push-notifications@8.1.3",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor-plugins.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-plugins#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-plugins/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/push-notifications/-/push-notifications-8.1.3.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/push-notifications"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "leaflet",
+      "group": "@types",
+      "version": "1.9.22",
+      "bom-ref": "cpcp-mobile@0.0.0|@types/leaflet@1.9.22",
+      "description": "TypeScript definitions for leaflet",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40types/leaflet@1.9.22",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git#types/leaflet",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\" and \"repository.directory\""
+        },
+        {
+          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/leaflet",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@types/leaflet/-/leaflet-1.9.22.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@types/leaflet"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "leaflet",
+      "version": "1.9.4",
+      "bom-ref": "cpcp-mobile@0.0.0|leaflet@1.9.4",
+      "description": "JavaScript library for mobile-friendly interactive maps",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/leaflet@1.9.4",
+      "externalReferences": [
+        {
+          "url": "git://github.com/Leaflet/Leaflet.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://leafletjs.com/",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/Leaflet/Leaflet/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/leaflet/-/leaflet-1.9.4.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/leaflet"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react-dom",
+      "version": "19.3.1",
+      "bom-ref": "cpcp-mobile@0.0.0|react-dom@19.3.1",
+      "description": "React package for working with the DOM.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/react-dom@19.3.1",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/react/react.git#packages/react-dom",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\" and \"repository.directory\""
+        },
+        {
+          "url": "https://react.dev/",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/react/react/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/react-dom/-/react-dom-19.3.1.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/react-dom"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "19.3.1",
+      "bom-ref": "cpcp-mobile@0.0.0|react@19.3.1",
+      "description": "React is a JavaScript library for building user interfaces.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/react@19.3.1",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/react/react.git#packages/react",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\" and \"repository.directory\""
+        },
+        {
+          "url": "https://react.dev/",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/react/react/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/react/-/react-19.3.1.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:constraint:engine:node",
+          "value": ">=0.10.0"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/react"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "android",
+      "group": "@capacitor",
+      "version": "8.5.3",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/android@8.5.3",
+      "author": "Ionic Team",
+      "description": "Capacitor: Cross-platform apps with JavaScript and the web",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/android@8.5.3",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://capacitorjs.com",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/android/-/android-8.5.3.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/android"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "ios",
+      "group": "@capacitor",
+      "version": "8.5.3",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/ios@8.5.3",
+      "author": "Ionic Team",
+      "description": "Capacitor: Cross-platform apps with JavaScript and the web",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/ios@8.5.3",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://capacitorjs.com",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/ios/-/ios-8.5.3.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/ios"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "keyboard",
+      "group": "@capacitor",
+      "version": "8.0.6",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/keyboard@8.0.6",
+      "author": "Ionic",
+      "description": "The Keyboard API provides keyboard display and visibility control, along with event tracking when the keyboard shows and hides.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/keyboard@8.0.6",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/ionic-team/capacitor-keyboard.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-keyboard#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/ionic-team/capacitor-keyboard/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@capacitor/keyboard/-/keyboard-8.0.6.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/keyboard"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tslib",
+      "version": "2.8.1",
+      "bom-ref": "cpcp-mobile@0.0.0|tslib@2.8.1",
+      "author": "Microsoft Corp.",
+      "description": "Runtime library for TypeScript helper functions",
+      "licenses": [
+        {
+          "license": {
+            "id": "0BSD",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tslib@2.8.1",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/Microsoft/tslib.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://www.typescriptlang.org/",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/Microsoft/TypeScript/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/tslib"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "synapse",
+      "group": "@capacitor",
+      "version": "1.0.4",
+      "bom-ref": "cpcp-mobile@0.0.0|@capacitor/synapse@1.0.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40capacitor/synapse@1.0.4",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/@capacitor/synapse/-/synapse-1.0.4.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@capacitor/synapse"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "geojson",
+      "group": "@types",
+      "version": "7946.0.16",
+      "bom-ref": "cpcp-mobile@0.0.0|@types/geojson@7946.0.16",
+      "description": "TypeScript definitions for geojson",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40types/geojson@7946.0.16",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git#types/geojson",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\" and \"repository.directory\""
+        },
+        {
+          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/geojson",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@types/geojson/-/geojson-7946.0.16.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@types/geojson"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "scheduler",
+      "version": "0.28.0",
+      "bom-ref": "cpcp-mobile@0.0.0|scheduler@0.28.0",
+      "description": "Cooperative scheduler for the browser environment.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/scheduler@0.28.0",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/react/react.git#packages/scheduler",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\" and \"repository.directory\""
+        },
+        {
+          "url": "https://react.dev/",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/react/react/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/scheduler/-/scheduler-0.28.0.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/scheduler"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "cpcp-mobile@0.0.0",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@aparajita/capacitor-secure-storage@8.0.1",
+        "cpcp-mobile@0.0.0|@capacitor/app@8.1.2",
+        "cpcp-mobile@0.0.0|@capacitor/camera@8.2.6",
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3",
+        "cpcp-mobile@0.0.0|@capacitor/geolocation@8.2.4",
+        "cpcp-mobile@0.0.0|@capacitor/network@8.0.1",
+        "cpcp-mobile@0.0.0|@capacitor/push-notifications@8.1.3",
+        "cpcp-mobile@0.0.0|@types/leaflet@1.9.22",
+        "cpcp-mobile@0.0.0|leaflet@1.9.4",
+        "cpcp-mobile@0.0.0|react-dom@19.3.1",
+        "cpcp-mobile@0.0.0|react@19.3.1"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@aparajita/capacitor-secure-storage@8.0.1",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/android@8.5.3",
+        "cpcp-mobile@0.0.0|@capacitor/app@8.1.2",
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3",
+        "cpcp-mobile@0.0.0|@capacitor/ios@8.5.3",
+        "cpcp-mobile@0.0.0|@capacitor/keyboard@8.0.6"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/app@8.1.2",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/camera@8.2.6",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/core@8.5.3",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|tslib@2.8.1"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/geolocation@8.2.4",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3",
+        "cpcp-mobile@0.0.0|@capacitor/synapse@1.0.4"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/network@8.0.1",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/push-notifications@8.1.3",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@types/leaflet@1.9.22",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@types/geojson@7946.0.16"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|leaflet@1.9.4"
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|react-dom@19.3.1",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|react@19.3.1",
+        "cpcp-mobile@0.0.0|scheduler@0.28.0"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|react@19.3.1"
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/android@8.5.3",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/ios@8.5.3",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/keyboard@8.0.6",
+      "dependsOn": [
+        "cpcp-mobile@0.0.0|@capacitor/core@8.5.3"
+      ]
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|tslib@2.8.1"
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@capacitor/synapse@1.0.4"
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|@types/geojson@7946.0.16"
+    },
+    {
+      "ref": "cpcp-mobile@0.0.0|scheduler@0.28.0"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+ "_note": "Recorded reviews for packages the automatic policy cannot pass by itself. All are transitive dependencies of the Frappe platform (installed in the bench environment, NOT vendored or redistributed by CPCP) or dev tooling. Entries marked 'metadata missing' have incomplete package metadata; the upstream licence is recorded from the project's own documentation and a maintainer should confirm it before any redistribution of a built image. Review date 2026-10-19.",
+ "packages": {
+  "fqdn": {
+   "license": "MPL-2.0",
+   "reason": "weak copyleft file-level; used unmodified as a library (jsonschema dependency)"
+  },
+  "ldap3": {
+   "license": "LGPL-3.0",
+   "reason": "LGPL: dynamically used library of Frappe's LDAP login; unmodified; not linked into CPCP code"
+  },
+  "certifi": {
+   "license": "MPL-2.0",
+   "reason": "CA bundle data, unmodified"
+  },
+  "chardet": {
+   "license": "LGPL-2.1+",
+   "reason": "library used by Frappe, unmodified"
+  },
+  "cssutils": {
+   "license": "LGPL",
+   "reason": "library used by Frappe email rendering, unmodified"
+  },
+  "num2words": {
+   "license": "LGPL-2.1",
+   "reason": "library used by Frappe, unmodified"
+  },
+  "psycopg2-binary": {
+   "license": "LGPL-3.0 with exceptions",
+   "reason": "Frappe's optional PostgreSQL driver; CPCP uses MariaDB; unmodified"
+  },
+  "pyphen": {
+   "license": "GPL-2.0+ OR LGPL-2.1+ OR MPL-1.1 (tri-licensed)",
+   "reason": "consumed under the LGPL/MPL option; WeasyPrint hyphenation dependency in Frappe; unmodified"
+  },
+  "frappe": {
+   "license": "MIT",
+   "reason": "metadata missing in the installed package; upstream repository LICENSE is MIT (verified via GitHub API 2026-10-19)"
+  },
+  "asttokens": {
+   "license": "Apache-2.0",
+   "reason": "metadata missing; IPython dependency; upstream licence Apache-2.0"
+  },
+  "bleach": {
+   "license": "Apache-2.0",
+   "reason": "metadata missing; upstream licence Apache-2.0"
+  },
+  "passlib": {
+   "license": "BSD",
+   "reason": "metadata missing; upstream licence BSD"
+  },
+  "ply": {
+   "license": "BSD-3-Clause",
+   "reason": "metadata missing; upstream licence BSD"
+  },
+  "protobuf": {
+   "license": "BSD-3-Clause",
+   "reason": "metadata missing; upstream licence BSD-3-Clause"
+  },
+  "uritemplate": {
+   "license": "BSD-3-Clause OR Apache-2.0",
+   "reason": "metadata missing; upstream dual licence"
+  },
+  "maxminddb-geolite2": {
+   "license": "metadata missing",
+   "reason": "transitive dependency of Frappe; wraps MaxMind GeoLite2 data (CC BY-SA 4.0 per MaxMind). Not used by CPCP. MAINTAINER TO CONFIRM before redistributing any built image"
+  }
+ }
+}

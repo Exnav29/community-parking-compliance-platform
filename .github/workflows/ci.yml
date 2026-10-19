@@ -28,3 +28,32 @@ jobs:
       - name: gitleaks (full history)
         run: |
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --source /repo --redact --no-banner
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+        working-directory: apps/mobile
+      - name: "Production dependencies must have no high or critical advisories"
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: apps/mobile
+      - name: Fresh mobile SBOM
+        run: npx --yes @cyclonedx/cyclonedx-npm --omit dev --output-format JSON --output-file ../../docs/legal/sbom/mobile-npm.cdx.json
+        working-directory: apps/mobile
+      - name: "Licence policy over the committed backend SBOM and a fresh mobile SBOM"
+        run: python3 scripts/license_check.py docs/legal/sbom/backend-bench-env.cdx.json docs/legal/sbom/mobile-npm.cdx.json
+      - name: "Python advisories in the Frappe environment (report only; fixes are upstream, see DEPENDENCY_FINDINGS.md)"
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          python3 scripts/sbom_to_requirements.py docs/legal/sbom/backend-bench-env.cdx.json > backend-req.txt
+          pip-audit -r backend-req.txt --no-deps --disable-pip || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sboms
+          path: docs/legal/sbom/*.json
