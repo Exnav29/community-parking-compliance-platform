@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import frappe
 from frappe.utils import cint
 
+from frappe_cpcp.services import access
 from frappe_cpcp.services.access import TABLE
 from frappe_cpcp.services.common import to_db, utcnow
 
@@ -17,7 +18,7 @@ OUT_OF_DUTY_CODES = ("no_active_shift", "shift_other_estate", "gate_mismatch", "
 
 
 def _setting(field: str, default: int) -> int:
-    return cint(frappe.db.get_single_value("CPCP Settings", field) or default)
+    return cint(frappe.db.get_single_value("CPCP Settings", field, cache=False) or default)
 
 
 def _iso(dt: datetime) -> str:
@@ -54,7 +55,8 @@ def run_detection(now: datetime | None = None, window_minutes: int = 60) -> dict
         if _flag(rule, actor, estate or "", bucket, count, summary, severity):
             raised[rule] = raised.get(rule, 0) + 1
 
-    q = lambda sql, *p: frappe.db.sql(sql, p, as_dict=True)  # noqa: E731
+    # the journal is committed on its own connection: read it on a FRESH one so detection never works from a stale snapshot
+    q = lambda sql, *p: [frappe._dict(r) for r in access.query(sql, p)]  # noqa: E731
     ok_results = ("Allowed", "No Match")
 
     for r in q(f"select actor, max(estate) estate, count(distinct target_unit) n from `{TABLE}` where at_utc>=%s and result in %s and target_unit != '' "

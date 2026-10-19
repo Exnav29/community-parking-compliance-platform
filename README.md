@@ -17,7 +17,8 @@ accounting and appeals. **The goal is voluntary compliance and safe access, not 
 | Domain core, 35-DocType Frappe app, incident lifecycle (v1.7), **purpose-based resident privacy (v1.8)**, communications, gated enforcement, reports | Implemented and verified; see [docs/STATUS.md](docs/STATUS.md) |
 | Mobile app (React + Capacitor) | Implemented; awaiting physical-device validation |
 | Isolated Frappe site per organization (dev: 2 sites), cross-tenant isolation | Verified over HTTP |
-| Desktop management console, map/finance screens | Not started |
+| Desktop management console (React; served by Frappe) | Implemented; see [docs/CONSOLE.md](docs/CONSOLE.md) |
+| Finance/appeals screens, policy simulator, tenant onboarding UI | Not started |
 
 See [docs/STATUS.md](docs/STATUS.md) for verified results and blockers, and
 [docs/spec/PRD_v1.8.md](docs/spec/PRD_v1.8.md) for the specification.
@@ -28,6 +29,9 @@ inside it. Authorization is a single tested service (`core/authz.py`) called by 
 `has_permission` / `permission_query_conditions` hooks. Residents have no access to the resident/vehicle
 registry or visitor log, and **security officers have no standing directory access either**: every sensitive lookup needs a server-verified purpose (a live gate shift or an assigned case), returns minimum fields, and is written to a tamper-evident journal ([docs/security/PRIVACY_PBAC.md](docs/security/PRIVACY_PBAC.md)). Anonymous reports use a separate unauthenticated intake with no reporter correlator.
 Details: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
+
+## Packages
+* `apps/frappe_cpcp` Frappe app and domain core, `apps/mobile` Android/iOS app (Capacitor), `apps/web` management console, `tests/` HTTP suites, `docs/` specification, architecture, security and deployment notes.
 
 ## Quick start (Docker, synthetic data only)
 ```bash

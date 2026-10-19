@@ -23,7 +23,7 @@ PLATE_LOOKUPS_PER_HOUR = 60
 
 
 def _limit(field: str, default: int) -> int:
-    return int(frappe.db.get_single_value("CPCP Settings", field) or default)
+    return int(frappe.db.get_single_value("CPCP Settings", field, cache=False) or default)
 
 
 def _lookup_core(estate: str, norm: str) -> tuple[dict, str]:

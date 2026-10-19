@@ -49,7 +49,7 @@ def search(actor_user: str | None = None, unit: str | None = None, result: str |
         p.append(date_to + "T23:59:59" if len(date_to) == 10 else date_to)
     sql += " order by seq desc limit %s offset %s"
     p += [min(cint(limit), 500), cint(offset)]
-    rows = frappe.db.sql(sql, p, as_dict=True)
+    rows = access.query(sql, p)  # fresh connection: always the latest committed events
     _record_review(a, "review", f"search returned {len(rows)} rows")
     return {"rows": rows, "count": len(rows)}
 
@@ -63,10 +63,10 @@ def summary(date_from: str | None = None, date_to: str | None = None) -> dict:
     until = (date_to + "T23:59:59") if date_to else "9999"
     base = f"from `{TABLE}` where at_utc >= %s and at_utc <= %s" + scope
     p = [since, until] + params
-    people = frappe.db.sql(f"select actor, max(role) role, sum(result='Allowed') allowed, sum(result='Denied') denied, sum(result='No Match') no_match, "
-                           f"sum(result='Emergency') emergency, count(distinct nullif(target_unit,'')) households {base} group by actor order by denied desc, households desc", p, as_dict=True)
-    repeats = frappe.db.sql(f"select target_unit unit, count(*) lookups, count(distinct actor) officers {base} and target_unit != '' and action in ('search','history','history_bare','contact') "
-                            "group by target_unit having lookups >= 3 order by lookups desc limit 20", p, as_dict=True)
+    people = access.query(f"select actor, max(role) role, sum(result='Allowed') allowed, sum(result='Denied') denied, sum(result='No Match') no_match, "
+                           f"sum(result='Emergency') emergency, count(distinct nullif(target_unit,'')) households {base} group by actor order by denied desc, households desc", p)
+    repeats = access.query(f"select target_unit unit, count(*) lookups, count(distinct actor) officers {base} and target_unit != '' and action in ('search','history','history_bare','contact') "
+                            "group by target_unit having lookups >= 3 order by lookups desc limit 20", p)
     _record_review(a, "review", "summary")
     return {"people": [{**r, "allowed": int(r["allowed"] or 0), "denied": int(r["denied"] or 0), "no_match": int(r["no_match"] or 0),
                         "emergency": int(r["emergency"] or 0)} for r in people], "most_looked_up_households": repeats,
@@ -131,7 +131,7 @@ def export_log(date_from: str | None = None, date_to: str | None = None) -> dict
     if date_to:
         sql += " and at_utc <= %s"
         p.append(date_to + "T23:59:59" if len(date_to) == 10 else date_to)
-    rows = frappe.db.sql(sql + " order by seq asc limit 5000", p, as_dict=True)
+    rows = access.query(sql + " order by seq asc limit 5000", p)
     out = io.StringIO()
     w = csv.DictWriter(out, fieldnames=list(rows[0].keys()) if rows else SAFE_COLS.replace(" ", "").split(","))
     w.writeheader()
@@ -145,4 +145,13 @@ def export_log(date_from: str | None = None, date_to: str | None = None) -> dict
 def verify_chain() -> dict:
     authorize("access_review", "R")
     ok, bad = access.verify_chain()
+    return {"intact": ok, "first_bad_seq": bad}
+
+
+@frappe.whitelist()
+def verify_audit_chain() -> dict:
+    """Integrity of the general audit chain (policy, enforcement, merges...) for reviewers."""
+    authorize("access_review", "R")
+    from frappe_cpcp.services.audit import verify_audit_chain as _verify
+    ok, bad = _verify()
     return {"intact": ok, "first_bad_seq": bad}

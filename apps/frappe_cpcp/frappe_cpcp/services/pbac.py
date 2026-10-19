@@ -59,7 +59,7 @@ def _deny(actor, estate, *, action, record_type, category, purpose, ref="", code
 
 
 def _settings_int(field: str, default: int) -> int:
-    return int(frappe.db.get_single_value("CPCP Settings", field) or default)
+    return int(frappe.db.get_single_value("CPCP Settings", field, cache=False) or default)
 
 
 def current_shift(user: str):

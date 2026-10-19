@@ -18,7 +18,7 @@ from frappe_cpcp.services.audit import log_audit
 
 def purge_expired_access_events(now: datetime | None = None, days: int | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
-    days = days or cint(frappe.db.get_single_value("CPCP Settings", "access_log_retention_days") or 730)
+    days = days or cint(frappe.db.get_single_value("CPCP Settings", "access_log_retention_days", cache=False) or 730)
     cutoff = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
     # Only a CONTIGUOUS prefix of the chain can be removed (so the remainder still verifies from its own anchor).
     rows = frappe.db.sql(f"select seq, hash, at_utc, result, review_state from `{TABLE}` order by seq asc", as_dict=True)

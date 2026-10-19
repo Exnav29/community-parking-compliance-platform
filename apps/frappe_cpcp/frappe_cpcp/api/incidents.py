@@ -305,3 +305,24 @@ def repeat_offenders(estate: str, window_days: int | None = None) -> dict:
     return {"window_days": days, "basis": "distinct verified episodes",
             "repeat_vehicles": [{"plate": mask_plate(r.plate.replace(' ', '').replace('-', '')), "episodes": r.episodes, "reports_attached": r.allegations or 0,
                                  "first": iso(r.first_at), "last": iso(r.last_at)} for r in rows]}
+
+
+@frappe.whitelist()
+def list_cases(estate: str, episode_status: str | None = None, search: str | None = None, limit: int = 100) -> list[dict]:
+    """Management case list (all incidents, not only open ones). Not available to officers, who only see their assigned cases."""
+    actor = authorize("incident_reports", "R", estate=estate)
+    if actor.role.value == "security_officer":
+        raise frappe.PermissionError("not permitted")
+    from frappe_cpcp.services import access
+    f = {"estate": estate, "merged_into": ["is", "not set"]}
+    if episode_status:
+        f["episode_status"] = episode_status
+    rows = frappe.get_all("CPCP Violation Incident", filters=f, order_by="verified_at desc", limit=min(cint(limit), 300),
+                          fields=["name", "plate_snapshot", "classification", "episode_status", "status", "allegation_count", "priority", "assigned_officer",
+                                  "verified_at", "ended_at", "end_evidence", "penalty_review", "responsible_unit"])
+    if search:
+        term = search.strip().upper().replace(" ", "")
+        rows = [r for r in rows if term in (r.plate_snapshot or "").upper().replace(" ", "").replace("-", "") or term == r.name]
+    access.record(actor=actor.user, role=actor.role.value, estate=estate, action="list", record_type="Violation Incident", category="restricted_legal",
+                  purpose="supervisor_review", context=f"{len(rows)} cases listed")
+    return [{**r, "verified_at": iso(r.verified_at), "ended_at": iso(r.ended_at)} for r in rows]

@@ -31,3 +31,4 @@ Pods/
 .claude/
 .DS_Store
 apps/mobile/dist/
+apps/frappe_cpcp/frappe_cpcp/public/web/

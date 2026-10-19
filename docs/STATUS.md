@@ -7,6 +7,8 @@ Updated 2026-10-19 (second session).
 | Core unit tests (pytest, no Frappe) | **88 passed** (includes the purpose rules in `core/pbac.py`) |
 | Frappe integration on org-a: integration 22, comms/enforcement 14, reports 6, dedup (AC-D01..D18) 19, PBAC-01..20 + extras 22, **resident photos 5** | **88 passed** |
 | Cross-tenant HTTP isolation (two sites) | **8 passed** |
+| **Management console** (`tests/console`: every console call for 6 roles, plus served-from-Frappe check) | **8 passed** |
+| Web console unit tests (`apps/web`) + `tsc -b` + build | **4 passed**, typecheck clean, build OK |
 | **Privacy over HTTP** (`tests/privacy`: Desk/REST/search/print/export, forged purposes, journal visibility, cross-tenant journals, device revocation) | **16 passed** |
 | Parallel HTTP concurrency (6 scenarios; earlier repeated 40x = 240 runs with 0 failures) | **6 passed** |
 | Mobile (vitest) + `tsc -b` + production build | **12 passed**, typecheck clean, build OK |
@@ -86,7 +88,7 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 | Mobile app (gate, triage, verify with map pin, case/contact, resident reporting, consolidated reports, end-episode) | **Implemented, awaiting physical-device validation** (`docs/ANDROID_TESTING.md`) |
 | Two isolated organization sites; cross-tenant isolation | Verified (HTTP) |
 | GitHub CI (core tests, lint, DocType regeneration check, secret scan, web build, unsigned debug APK) | Passing at last push |
-| Desktop management console (including the Access Review dashboard UI) | Not started (APIs ready) |
+| **Desktop management console** (overview, cases/reports with merge/split/reassign, map, registers, staff/devices, policies, access review) | **Implemented; server authorization verified over HTTP for 6 roles; no screenshots or accessibility audit yet** (`docs/CONSOLE.md`) |
 | Permission matrix (generated) and privacy/PBAC design docs | Done (`docs/security/`) |
 | Threat model, app-store compliance matrix, backup/restore procedure, dependency findings | Done (`docs/security/THREAT_MODEL.md`, `docs/deployment/`); store matrix is PREPARATION only |
 | SBOM + licence policy + audit + Dependabot in CI | Implemented (`supply-chain` job; workflow not yet seen running) |
@@ -104,6 +106,6 @@ All 18 are implemented and **pass** (serial, real DB and permission hooks: `apps
 * Legal items: clamping/towing authority, Ghana DPA review, SMS/voice/payment provider terms, AI-authorship question (see `docs/legal/OWNERSHIP_AND_PUBLICATION_CLEARANCE.md`).
 
 ## Next
-1. Desktop management console (React web) including the Access Review dashboard and case review (merge/split).
+1. Console gaps: screenshots, screen-reader audit, appeals/finance pages, policy simulator, tenant onboarding UI.
 2. Resolve the open Python advisories in staging; account deletion flow; tenant export/offboarding; external penetration test and MASVS review (G5 in the threat model).
 3. Android device test with the owner; fix findings.
