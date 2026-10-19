@@ -46,6 +46,6 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Security i
 Never include real resident, visitor, plate, GPS or credential data in issues or PRs.
 
 ## License
-Original code: [Apache License 2.0](LICENSE). Third-party components keep their own licenses
+Original code: [Apache License 2.0](LICENSE), Copyright (c) 2026 Johnathan Lightfoot and contributors (see [NOTICE](NOTICE)); sponsored by Bulletproof Automations. Third-party components keep their own licenses
 ([docs/legal/THIRD_PARTY_LICENSES.md](docs/legal/THIRD_PARTY_LICENSES.md)). Open-source code does not grant access
 to any association's data, hosted accounts, payment merchant accounts or app-signing keys.

@@ -13,7 +13,7 @@ Thank you for helping. This project handles sensitive community data, so a few r
    `docs/legal/THIRD_PARTY_LICENSES.md`.
 
 ## License and sign-off (inbound = outbound)
-Contributions are licensed under Apache-2.0. Certify the [Developer Certificate of Origin](https://developercertificate.org/)
+Contributions are licensed under Apache-2.0 and you keep your own copyright; the DCO is a certification of your right to contribute, not a copyright assignment. Certify the [Developer Certificate of Origin](https://developercertificate.org/)
 by signing off every commit: `git commit -s`.
 
 ## Workflow

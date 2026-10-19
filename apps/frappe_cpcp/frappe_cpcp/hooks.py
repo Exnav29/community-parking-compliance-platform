@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 app_name = "frappe_cpcp"
 app_title = "CPCP"
-app_publisher = "CPCP Project Authors"
+app_publisher = "Johnathan Lightfoot"
 app_description = "Community Parking & Compliance Platform"
 app_email = "noreply@example.invalid"
 app_license = "Apache-2.0"

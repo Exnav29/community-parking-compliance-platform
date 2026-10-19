@@ -8,7 +8,7 @@ description = "Community Parking & Compliance Platform (CPCP): multi-organizatio
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-authors = [{ name = "CPCP Project Authors" }]
+authors = [{ name = "Johnathan Lightfoot" }]
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 dynamic = ["version"]
 dependencies = []
