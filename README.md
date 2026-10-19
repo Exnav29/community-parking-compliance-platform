@@ -40,9 +40,12 @@ python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install pytest && cd apps/frappe_cpcp && python -m pytest
 ```
 
-## Contributing
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.md).
-Never include real resident, visitor, plate, GPS or credential data in issues or PRs.
+## Community and contributions
+Join [GitHub Discussions](https://github.com/Exnav29/community-parking-compliance-platform/discussions) to ask questions, suggest ideas, and connect with other contributors. Use [Issues](https://github.com/Exnav29/community-parking-compliance-platform/issues) for reproducible bugs and tracked work.
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and the [PR Review Guide](docs/community/PULL_REQUEST_REVIEW.md). We run automated tests, secret and dependency checks, mobile lint, and code scanning; human review is still required before merging. Security issues must be [reported privately](SECURITY.md).
+
+Never include real resident, visitor, plate, GPS or credential data in issues, discussions or PRs.
 
 ## License
 Original code: [Apache License 2.0](LICENSE), Copyright (c) 2026 Johnathan Lightfoot and contributors (see [NOTICE](NOTICE)); sponsored by Bulletproof Automations. Third-party components keep their own licenses
