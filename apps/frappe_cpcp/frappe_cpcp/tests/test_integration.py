@@ -323,3 +323,26 @@ class TestCPCP(FrappeTestCase):
         frappe.set_user("Guest")
         doc = frappe.get_doc("CPCP Estate", self.estate)
         self.assertFalse(has_permission(doc, "read", "Guest"))
+
+    # ---- officer evidence photo ----------------------------------------------------------------
+    def test_evidence_photo_is_validated_hashed_and_private(self):
+        import base64
+        import hashlib
+
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+        good = base64.b64encode(png).decode()
+        r = self._report(plate="PH0001")
+        wi = frappe.get_all("CPCP Security Work Item", filters={"allegation": r["reference"]}, pluck="name")[0]
+        as_user("officer")
+        alg_api.claim_work_item(wi)
+        with self.assertRaises(frappe.ValidationError):  # not an image
+            alg_api.verify_and_create_violation(r["reference"], "PH0001", None, 5.605, -0.185, 8, photo_base64=base64.b64encode(b"hello").decode())
+        with self.assertRaises(frappe.ValidationError):  # client hash does not match the bytes
+            alg_api.verify_and_create_violation(r["reference"], "PH0001", "0" * 64, 5.605, -0.185, 8, photo_base64=good)
+        v = alg_api.verify_and_create_violation(r["reference"], "PH0001", hashlib.sha256(png).hexdigest(), 5.605, -0.185, 8,
+                                                photo_base64=good)
+        ev = frappe.get_all("CPCP Officer Evidence", filters={"incident": v["incident"]}, fields=["photo", "sha256"])[0]
+        self.assertEqual(ev.sha256, hashlib.sha256(png).hexdigest())
+        f = frappe.get_doc("File", {"file_url": ev.photo})
+        self.assertEqual(f.is_private, 1)
+        self.assertEqual(f.attached_to_doctype, "CPCP Officer Evidence")

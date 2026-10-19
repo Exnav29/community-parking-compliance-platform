@@ -303,11 +303,44 @@ def reveal_reporter(allegation: str, reason: str) -> dict:
     return {"reporter_user": a.reporter_user}
 
 
+MAX_PHOTO_BYTES = 6 * 1024 * 1024
+_MAGIC = {b"\xff\xd8\xff": ("jpg", "image/jpeg"), b"\x89PNG\r\n\x1a\n": ("png", "image/png")}
+
+
+def _store_evidence_photo(b64: str | None, name: str | None, claimed_sha256: str | None) -> tuple[str | None, str | None]:
+    """Validate (type by magic bytes, size), hash server-side, store PRIVATELY. A client hash that disagrees is rejected
+    (integrity); the server hash is what gets recorded."""
+    if not b64:
+        return None, None
+    import base64
+    import binascii
+
+    if "," in b64[:64]:  # tolerate a data: URL prefix
+        b64 = b64.split(",", 1)[1]
+    try:
+        raw = base64.b64decode(b64, validate=True)
+    except (binascii.Error, ValueError):
+        frappe.throw("Photo is not valid base64", frappe.ValidationError)
+    if not raw or len(raw) > MAX_PHOTO_BYTES:
+        frappe.throw("Photo is empty or larger than 6 MB", frappe.ValidationError)
+    ext = next((e for magic, (e, _m) in _MAGIC.items() if raw.startswith(magic)), None)
+    if ext is None:
+        frappe.throw("Only JPEG or PNG evidence photos are accepted", frappe.ValidationError)
+    digest = hashlib.sha256(raw).hexdigest()
+    if claimed_sha256 and claimed_sha256.lower() != digest:
+        frappe.throw("Photo integrity check failed (hash mismatch); capture it again", frappe.ValidationError)
+    from frappe.utils.file_manager import save_file
+
+    f = save_file(f"evidence-{digest[:12]}.{ext}", raw, None, None, is_private=1)
+    return digest, f.file_url
+
+
 @frappe.whitelist(methods=["POST"])
-def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha256: str, device_lat: float, device_lon: float,
+def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha256: str | None, device_lat: float, device_lon: float,
                                 device_accuracy_m: float, pin_lat: float | None = None, pin_lon: float | None = None,
                                 pin_source: str = "device", pin_reason: str | None = None, geofence_override_reason: str | None = None,
-                                classification: str = "Ordinary", note: str | None = None) -> dict:
+                                classification: str = "Ordinary", note: str | None = None, photo_base64: str | None = None,
+                                photo_name: str | None = None) -> dict:
     """One guided action: officer attests independently, a NEW linked incident is created, the allegation is untouched."""
     a = frappe.db.get_value("CPCP Parking Allegation", allegation, ["name", "estate", "state", "dedup_cluster"], as_dict=True)
     if not a:
@@ -332,6 +365,8 @@ def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha25
         if geo.geofence_status(pin, poly) != "inside" and not (geofence_override_reason or "").strip():
             frappe.throw("Location is outside the estate boundary; provide an override reason or correct the pin", frappe.ValidationError)
 
+    photo_hash, photo_url = _store_evidence_photo(photo_base64, photo_name, officer_photo_sha256)
+    officer_photo_sha256 = photo_hash or officer_photo_sha256
     existing = frappe.db.sql(
         """select i.name from `tabCPCP Violation Incident` i join `tabCPCP Incident Allegation Link` l on l.parent = i.name
            join `tabCPCP Parking Allegation` p on p.name = l.allegation where p.dedup_cluster = %s and p.estate = %s limit 1""",
@@ -360,10 +395,14 @@ def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha25
         inc.save(ignore_permissions=True)
     frappe.get_doc({
         "doctype": "CPCP Officer Evidence", "allegation": allegation, "incident": incident, "captured_by": actor.user,
-        "captured_at_server": to_db(now), "sha256": officer_photo_sha256, "latitude": float(device_lat), "longitude": float(device_lon),
+        "captured_at_server": to_db(now), "sha256": officer_photo_sha256, "photo": photo_url, "latitude": float(device_lat), "longitude": float(device_lon),
         "accuracy_m": float(device_accuracy_m), "pin_latitude": float(pin_lat) if pin_lat is not None else None,
         "pin_longitude": float(pin_lon) if pin_lon is not None else None, "pin_source": pin_source, "pin_reason": pin_reason,
         "note": note}).insert(ignore_permissions=True)
+    if photo_url:
+        evidence = frappe.get_all("CPCP Officer Evidence", filters={"photo": photo_url}, pluck="name", limit=1)
+        frappe.db.set_value("File", {"file_url": photo_url}, {"attached_to_doctype": "CPCP Officer Evidence",
+                                                             "attached_to_name": evidence[0], "attached_to_field": "photo"})
     new_state = al.transition(al.State(a.state), al.State.VERIFIED, actor_is_security=True)
     frappe.db.set_value("CPCP Parking Allegation", allegation, "state", new_state.value, update_modified=False)
     frappe.db.set_value("CPCP Security Work Item", wi.name, "status", "Closed", update_modified=False)

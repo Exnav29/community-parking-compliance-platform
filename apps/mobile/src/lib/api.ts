@@ -23,8 +23,10 @@ export class FrappeClient {
   constructor(org: OrgContext, fetchImpl: typeof fetch = fetch.bind(globalThis)) {
     this.org = org;
     this.fetchImpl = fetchImpl;
-    if (!/^https:\/\//.test(org.baseUrl) && !/^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)/.test(org.baseUrl)) {
-      throw new Error("Organization URL must use HTTPS (plain HTTP only for local development)");
+    const lanOk = import.meta.env.VITE_ALLOW_LAN_HTTP === "1"; // set ONLY for development/test builds
+    const privateHttp = /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?(\/|$)/;
+    if (!/^https:\/\//.test(org.baseUrl) && !(privateHttp.test(org.baseUrl) && (lanOk || /localhost|127\.0\.0\.1|10\.0\.2\.2/.test(org.baseUrl)))) {
+      throw new Error("Organization URL must use HTTPS (plain HTTP is only allowed for local/LAN test builds)");
     }
   }
 
@@ -60,6 +62,10 @@ export class FrappeClient {
     const form = new URLSearchParams();
     for (const [k, v] of Object.entries(args)) if (v !== undefined && v !== null) form.set(k, String(v));
     return this.req(`/api/method/frappe_cpcp.api.${method}`, { method: "POST", body: form });
+  }
+  anonymousStatus(receiptId: string, secret: string) {
+    const form = new URLSearchParams({ receipt_id: receiptId, secret });
+    return this.req("/api/method/frappe_cpcp.api.allegations.anonymous_status", { method: "POST", body: form, anonymous: true });
   }
   /** Identity-unlinked: no cookies, no referrer, and callers must not attach any auth header. */
   submitAnonymous(args: Record<string, unknown>) {

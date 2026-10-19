@@ -288,3 +288,17 @@ def comms_timeline(incident: str) -> dict:
                           "officer": r.officer, "message_text": r.message_text} for r in rows],
             "notice": None if not notice else {"effective_at": iso(notice.effective_at), "deadline": iso(notice.deadline),
                                                "proof_basis": notice.proof_basis, "grace_minutes": notice.grace_minutes}}
+
+
+@frappe.whitelist()
+def preview_sms(incident: str, contact_id: str) -> dict:
+    """Exact text that would be sent, plus the recipient label, before the officer explicitly confirms (PRD 42.2)."""
+    inc = _incident(incident)
+    authorize("contact_responsible", "C", estate=inc["estate"])
+    contact = _pick(inc, contact_id)
+    s = frappe.get_single("CPCP Settings")
+    zone = frappe.db.get_value("CPCP Zone", inc["zone"], "zone_name") if inc["zone"] else "the estate"
+    text = cm.render_template(DEFAULT_SMS_TEMPLATE, {"plate": inc["plate_snapshot"], "zone": zone, "case_id": inc["name"],
+                              "security_number": s.security_desk_number or "the security desk"},
+                              bool(frappe.db.exists("CPCP Warning Notice", {"incident": incident})))
+    return {"text": text, "recipient": f"{contact.relationship.value} ({mask_phone(contact.phone_e164)})", "template_version": TEMPLATE_VERSION}

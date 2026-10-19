@@ -14,3 +14,20 @@ label { display:block; margin:12px 0; }
 ul { list-style:none; padding:0; }
 header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 header h1 { font-size:1.2em; margin:0; flex:1; }
+.ico { display:inline-grid; place-items:center; min-width:44px; height:44px; border-radius:10px; background:var(--accent); color:var(--bg); font-weight:700; margin-right:12px; font-size:.8em; }
+button.big { flex-direction:row; align-items:center; min-height:64px; }
+button.big small { display:block; color:var(--muted); font-weight:400; }
+button.big.ok { border-color:#1a7f37; } button.big.danger { border-color:var(--err); } button.big.primary { background:rgba(11,92,173,.12); }
+button.big:disabled { opacity:.5; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+button.chip { width:auto; min-height:48px; border-radius:24px; } button.chip.active { background:var(--accent); color:var(--bg); }
+.card { border:1px solid var(--muted); border-radius:12px; padding:12px; margin:10px 0; }
+.plain { list-style:none; padding:0; } .hint { color:var(--muted); font-size:.9em; } .warn { color:var(--err); }
+.badge { display:inline-block; border:2px solid var(--accent); border-radius:6px; padding:2px 6px; font-size:.75em; margin-right:6px; } .badge.danger { border-color:var(--err); color:var(--err); }
+.map { height:300px; border-radius:12px; margin:8px 0; } .pin span { font-size:30px; } .thumb { max-width:100%; border-radius:8px; }
+.bar { display:flex; align-items:center; gap:8px; } .bar h2 { margin:8px 0; font-size:1.2em; }
+.dot { font-size:.8em; padding:4px 8px; border-radius:12px; border:2px solid; } .dot.on { border-color:#1a7f37; } .dot.off { border-color:var(--err); color:var(--err); }
+label.row { display:flex; gap:10px; align-items:center; } label.row input { width:28px; min-height:28px; }
+.quote { background:rgba(128,128,128,.15); padding:8px; border-radius:8px; } pre.notice { white-space:pre-wrap; }
+select { font:inherit; min-height:48px; width:100%; }
+@media (max-width:360px) { body { font-size:16px; } .ico { min-width:36px; height:36px; } }

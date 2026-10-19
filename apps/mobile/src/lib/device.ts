@@ -29,13 +29,15 @@ export async function captureLocation(timeoutMs = 15000): Promise<LocationFix | 
   }
 }
 
-export async function takePhoto(): Promise<{ dataUrl: string; sha256: string } | null> {
+export async function takePhoto(): Promise<{ dataUrl: string; base64: string; sha256: string } | null> {
   try {
-    const photo = await Camera.getPhoto({ quality: 80, resultType: CameraResultType.DataUrl, source: CameraSource.Camera, allowEditing: false });
+    const photo = await Camera.getPhoto({ quality: 70, width: 1600, correctOrientation: true, resultType: CameraResultType.DataUrl, source: CameraSource.Camera, allowEditing: false });
     if (!photo.dataUrl) return null;
-    const bytes = new TextEncoder().encode(photo.dataUrl);
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    return { dataUrl: photo.dataUrl, sha256: [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("") };
+    const b64 = photo.dataUrl.split(",", 2)[1] ?? "";
+    const bin = atob(b64);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    const digest = await crypto.subtle.digest("SHA-256", bytes); // hash of the raw image bytes; the server recomputes it
+    return { dataUrl: photo.dataUrl, base64: b64, sha256: [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("") };
   } catch {
     return null;
   }
