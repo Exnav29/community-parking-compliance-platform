@@ -105,6 +105,12 @@ def seed_demo(profile: str = "a") -> dict:
         "admin": ("org_admin", None, None), "secmgr": ("security_manager", est1, None), "officer": ("security_officer", est1, None),
         "resident": ("resident", est1, unit1), "auditor": ("auditor", est1, None), "finance": ("finance", est1, None),
     }
+    labels = prof["estates"][0][1]
+    extra_units = {k: frappe.db.get_value("CPCP Unit", {"estate": est1, "unit_label": labels[i].upper()}, "name")
+                   for k, i in (("resident2", 1), ("resident3", min(2, len(labels) - 1)))}
+    users["officer2"] = ("security_officer", est1, None)
+    users["resident2"] = ("resident", est1, extra_units["resident2"])
+    users["resident3"] = ("resident", est1, extra_units["resident3"])
     for key, (role, estate, unit) in users.items():
         email = f"{key}@{dom}"
         _user(email, key.title(), pwd)

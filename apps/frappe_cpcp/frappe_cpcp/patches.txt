@@ -1,0 +1,4 @@
+[pre_model_sync]
+
+[post_model_sync]
+frappe_cpcp.patches.v1_7_incident_lifecycle

@@ -16,6 +16,8 @@
   "sms_provider",
   "sms_live_enabled",
   "security_desk_number",
+  "claim_lease_hours",
+  "repeat_window_days",
   "anonymous_label_verified",
   "sb_flags",
   "legal_approval_reference",
@@ -99,6 +101,20 @@
    "fieldtype": "Data",
    "label": "Security Desk Number",
    "description": "Shown in warning templates."
+  },
+  {
+   "fieldname": "claim_lease_hours",
+   "fieldtype": "Int",
+   "label": "Claim Lease Hours",
+   "default": "8",
+   "description": "A claim lapses after this many hours without activity; managers can reassign sooner."
+  },
+  {
+   "fieldname": "repeat_window_days",
+   "fieldtype": "Int",
+   "label": "Repeat Window Days",
+   "default": "365",
+   "description": "Window for counting distinct verified episodes as repeats."
   },
   {
    "fieldname": "anonymous_label_verified",

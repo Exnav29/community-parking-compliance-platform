@@ -115,6 +115,10 @@
   "append_only": true,
   "sensitivity": "RESTRICTED_EVIDENCE"
  },
+ "CPCP Work Item Allegation": {
+  "append_only": false,
+  "sensitivity": "STAFF_OPERATIONAL"
+ },
  "CPCP Zone": {
   "append_only": false,
   "sensitivity": "STAFF_OPERATIONAL"

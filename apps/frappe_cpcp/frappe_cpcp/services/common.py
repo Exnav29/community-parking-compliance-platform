@@ -62,3 +62,30 @@ def age_minutes(dt) -> int | None:
 
 def minutes_ago(n: int) -> datetime:
     return to_db(utcnow() - timedelta(minutes=n))
+
+
+def deadlock_retry(fn=None, *, attempts: int = 4):
+    """Re-run a whole request-level operation when InnoDB aborts it as a deadlock victim (or a lock wait times out).
+
+    InnoDB rolls back the victim's entire transaction, so the retry restarts from the beginning; every write path guarded
+    by this decorator is idempotent (client UUIDs, unique keys), so a retry can never double-apply.
+    """
+    import functools
+    import random
+    import time
+
+    def deco(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            for i in range(attempts):
+                try:
+                    return f(*args, **kwargs)
+                except (frappe.QueryDeadlockError, frappe.QueryTimeoutError):
+                    frappe.db.rollback()
+                    if i == attempts - 1:
+                        raise
+                    time.sleep(random.uniform(0.02, 0.08) * (i + 1))
+
+        return wrapper
+
+    return deco(fn) if fn else deco

@@ -9,10 +9,12 @@ from decimal import Decimal
 import frappe
 
 from frappe_cpcp.core import charges as ch
+from frappe_cpcp.core import episodes as ep
 from frappe_cpcp.core.flags import ENFORCEMENT_FLAGS, FeatureDisabled, require_flag
 from frappe_cpcp.permissions import authorize
+from frappe_cpcp.services import episodes as svc
 from frappe_cpcp.services.audit import log_audit
-from frappe_cpcp.services.common import from_db, iso, require, to_db, utcnow
+from frappe_cpcp.services.common import deadlock_retry, from_db, iso, require, to_db, utcnow
 
 TERMINAL = ("resolved_closed", "corrected_no_fee", "released")
 
@@ -73,6 +75,7 @@ def _view(a) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def propose_action(incident: str, action_type: str, reason: str) -> dict:
     inc = _inc(incident)
     actor = authorize("execute_enforcement", "C", estate=inc["estate"], assigned_to=inc["verified_by"])
@@ -93,14 +96,31 @@ def propose_action(incident: str, action_type: str, reason: str) -> dict:
                 frappe.throw("No established notice: enforcement needs a qualifying notice and an expired grace period", frappe.ValidationError)
             if from_db(n) > utcnow():
                 frappe.throw("Grace period has not expired", frappe.ValidationError)
+    key = None
+    if action_type in ("Clamp", "Tow"):
+        svc.lock_incident(incident)
+        state = svc.incident_state(incident)
+        event = "clamp_executed" if action_type == "Clamp" else "tow_ordered"
+        live = frappe.db.get_value("CPCP Enforcement Action", {"incident": incident, "action_type": action_type, "status": ["in", ["Proposed", "Approved", "Executed"]],
+                                                              "release_at": ["is", "not set"]}, "name")
+        if live or (ep.enforcement_in_progress(state) and event == "clamp_executed"):
+            frappe.throw(f"Already being handled: this incident is '{state.value}'. A second {action_type.lower()} cannot be started.", frappe.DuplicateEntryError)
+        try:
+            ep.apply(state, event)  # the lifecycle must permit this step from the current state
+        except ep.EpisodeError as e:
+            frappe.throw(str(e), frappe.ValidationError)
+        key = f"{incident}:{action_type}"
     a = frappe.get_doc({"doctype": "CPCP Enforcement Action", "incident": incident, "action_type": action_type, "status": "Proposed",
-                        "proposed_by": actor.user, "reason": reason,
-                        "legal_basis_reference": frappe.db.get_single_value("CPCP Settings", "legal_approval_reference")}).insert(ignore_permissions=True)
+                        "proposed_by": actor.user, "reason": reason, "active_key": key,
+                        "legal_basis_reference": frappe.db.get_single_value("CPCP Settings", "legal_approval_reference")})
+    if not svc._try_insert(a):  # DB-level uniqueness: at most one live clamp and one live tow per episode
+        frappe.throw("Already being handled: a live action of this type exists for the incident", frappe.DuplicateEntryError)
     log_audit(action="enforcement_proposed", entity="CPCP Enforcement Action", entity_id=a.name, reason=reason, role=actor.role.value)
     return _view(a)
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def approve_action(action: str) -> dict:
     a = frappe.get_doc("CPCP Enforcement Action", action)
     inc = _inc(a.incident)
@@ -112,11 +132,14 @@ def approve_action(action: str) -> dict:
     if a.action_type in ("Clamp", "Tow"):
         _gate("clamping_enabled" if a.action_type == "Clamp" else "towing_enabled")
     frappe.db.set_value("CPCP Enforcement Action", action, {"status": "Approved", "approved_by": actor.user, "approved_at": to_db(utcnow())}, update_modified=False)
+    if a.action_type == "Tow":
+        svc.apply_event(a.incident, "tow_ordered")
     log_audit(action="enforcement_approved", entity="CPCP Enforcement Action", entity_id=action, role=actor.role.value)
     return _view(frappe.get_doc("CPCP Enforcement Action", action))
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def execute_action(action: str, provider_ref: str | None = None, provider_amount: float | None = None) -> dict:
     a = frappe.get_doc("CPCP Enforcement Action", action)
     inc = _inc(a.incident)
@@ -140,11 +163,17 @@ def execute_action(action: str, provider_ref: str | None = None, provider_amount
     frappe.db.set_value("CPCP Enforcement Action", action, {"status": "Executed", "executed_by": actor.user, "executed_at": to_db(utcnow()),
                                                             "provider_ref": provider_ref}, update_modified=False)
     frappe.db.set_value("CPCP Violation Incident", a.incident, "status", new_status, update_modified=False)
+    if a.action_type == "Clamp":
+        svc.apply_event(a.incident, "clamp_executed")
+    elif a.action_type == "Cancel":  # cancelling frees the live action so it can be properly re-proposed
+        for live in frappe.get_all("CPCP Enforcement Action", filters={"incident": a.incident, "action_type": ["in", ["Clamp", "Tow"]], "status": ["in", ["Proposed", "Approved"]]}, pluck="name"):
+            frappe.db.set_value("CPCP Enforcement Action", live, {"status": "Cancelled", "active_key": None}, update_modified=False)
     log_audit(action="enforcement_executed", entity="CPCP Enforcement Action", entity_id=action, role=actor.role.value)
     return _view(frappe.get_doc("CPCP Enforcement Action", action))
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def record_yard_arrival(action: str) -> dict:
     a = frappe.get_doc("CPCP Enforcement Action", action)
     inc = _inc(a.incident)
@@ -155,10 +184,12 @@ def record_yard_arrival(action: str) -> dict:
         frappe.throw("Yard arrival already recorded", frappe.DuplicateEntryError)
     frappe.db.set_value("CPCP Enforcement Action", action, "yard_arrival_at", to_db(utcnow()), update_modified=False)
     frappe.db.set_value("CPCP Violation Incident", a.incident, "status", "impounded", update_modified=False)
+    svc.apply_event(a.incident, "tow_executed")
     return {"action": action, "yard_arrival_at": iso(utcnow())}
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def release_vehicle(action: str) -> dict:
     """Never gated by payment or by the enforcement flags: release/cancellation must always remain possible.
     Storage is computed from verified yard arrival to this release, only if impound charging is enabled."""
@@ -172,6 +203,9 @@ def release_vehicle(action: str) -> dict:
     now = utcnow()
     frappe.db.set_value("CPCP Enforcement Action", action, {"release_at": to_db(now)}, update_modified=False)
     frappe.db.set_value("CPCP Violation Incident", a.incident, "status", "released", update_modified=False)
+    frappe.db.set_value("CPCP Enforcement Action", action, "active_key", None, update_modified=False)
+    svc.apply_event(a.incident, "release_started")
+    svc.apply_event(a.incident, "closed")  # identity is NOT released: only positive departure evidence ends the episode
     storage = None
     f = flags()
     if a.action_type == "Tow" and a.yard_arrival_at and f.get("towing_enabled") and f.get("impound_release_enabled"):
@@ -186,12 +220,14 @@ def release_vehicle(action: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def mark_corrected(incident: str, note: str) -> dict:
     inc = _inc(incident)
     actor = authorize("issue_warning", "U", estate=inc["estate"])
     if inc["status"] in ("clamped", "tow_dispatched", "impounded", "released", "resolved_closed"):
         frappe.throw("Enforcement has already been executed; use release/appeal", frappe.ValidationError)
     frappe.db.set_value("CPCP Violation Incident", incident, "status", "corrected_no_fee", update_modified=False)
+    svc.apply_event(incident, "compliance_confirmed")
     log_audit(action="incident_corrected", entity="CPCP Violation Incident", entity_id=incident, reason=note, role=actor.role.value)
     return {"incident": incident, "status": "corrected_no_fee", "charges": 0}
 
@@ -208,6 +244,7 @@ def get_invoice(incident: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def submit_appeal(incident: str, reason: str) -> dict:
     inc = _inc(incident)
     actor = authorize("submit_appeal", "C", estate=inc["estate"], unit=inc["responsible_unit"])
@@ -221,6 +258,7 @@ def submit_appeal(incident: str, reason: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def decide_appeal(appeal: str, status: str, decision: str, credit_amount: float | None = None) -> dict:
     a = frappe.get_doc("CPCP Appeal", appeal)
     inc = _inc(a.incident)

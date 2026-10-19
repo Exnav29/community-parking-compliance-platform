@@ -41,13 +41,20 @@ def dashboard(estate: str, date_from: str | None = None, date_to: str | None = N
     alleg = q("select mode, state, count(*) n from `tabCPCP Parking Allegation` where estate=%(e)s and submitted_at>=%(a)s and submitted_at<%(b)s group by mode, state")
     total_alleg = sum(r.n for r in alleg)
     verified = sum(r.n for r in alleg if r.state.startswith("Verified"))
-    inc = q("select status, classification, count(*) n from `tabCPCP Violation Incident` where estate=%(e)s and verified_at>=%(a)s and verified_at<%(b)s group by status, classification")
+    inc = q("select status, classification, count(*) n from `tabCPCP Violation Incident` where estate=%(e)s and merged_into is null and verified_at>=%(a)s and verified_at<%(b)s group by status, classification")
     visits = q("select status, presence, estimated, duration_minutes from `tabCPCP Visitor Session` where estate=%(e)s and entry_at>=%(a)s and entry_at<%(b)s")
     durations = [r.duration_minutes for r in visits if r.presence == "Confirmed Out" and not r.estimated and r.duration_minutes is not None]
     comms = q("""select c.channel, c.provenance, c.outcome, c.sms_status, c.acknowledged from `tabCPCP Communication Attempt` c
                  join `tabCPCP Violation Incident` i on i.name=c.incident where i.estate=%(e)s and c.initiated_at>=%(a)s and c.initiated_at<%(b)s""")
     notices = q("select count(*) n from `tabCPCP Warning Notice` w join `tabCPCP Violation Incident` i on i.name=w.incident where i.estate=%(e)s and w.effective_at>=%(a)s and w.effective_at<%(b)s")[0].n
-    corrected = q("select count(*) n from `tabCPCP Violation Incident` where estate=%(e)s and status='corrected_no_fee' and verified_at>=%(a)s and verified_at<%(b)s")[0].n
+    corrected = q("select count(*) n from `tabCPCP Violation Incident` where estate=%(e)s and merged_into is null and status='corrected_no_fee' and verified_at>=%(a)s and verified_at<%(b)s")[0].n
+    uniq = q("select count(*) n, coalesce(sum(greatest(allegation_count-1,0)),0) dup from `tabCPCP Violation Incident` where estate=%(e)s and merged_into is null and verified_at>=%(a)s and verified_at<%(b)s")[0]
+    acts = q("""select a.action_type, count(*) n from `tabCPCP Enforcement Action` a join `tabCPCP Violation Incident` i on i.name=a.incident
+                where i.estate=%(e)s and a.status='Executed' and a.executed_at>=%(a)s and a.executed_at<%(b)s group by a.action_type""")
+    waits = [(from_db(w.claimed_at) - from_db(w.creation)).total_seconds() / 60 for w in q(
+        "select creation, claimed_at from `tabCPCP Security Work Item` where estate=%(e)s and claimed_at is not null and creation>=%(a)s and creation<%(b)s")]
+    repeats = q("""select count(*) n from (select plate_hash from `tabCPCP Violation Incident` where estate=%(e)s and merged_into is null and plate_hash is not null
+                   and verified_at>=%(a)s and verified_at<%(b)s group by plate_hash having count(*) >= 2) t""")[0].n
     out = {
         "range": {"from": str(a), "to": str(b - timedelta(days=1))},
         "allegations": {"submitted": total_alleg, "verified": verified,
@@ -55,6 +62,10 @@ def dashboard(estate: str, date_from: str | None = None, date_to: str | None = N
                         "conversion_rate": {"numerator": verified, "denominator": total_alleg,
                                             "value": round(verified / total_alleg, 3) if total_alleg else None},
                         "note": "Allegations are unverified resident reports; they are not violations."},
+        "episodes": {"unique_incidents": uniq.n, "verified_violations": uniq.n, "duplicate_reports_linked": int(uniq.dup),
+                     "enforcement_actions_executed": {r.action_type: r.n for r in acts},
+                     "repeat_vehicles_distinct_episodes": repeats, "median_first_response_minutes": _median(waits),
+                     "note": "Incidents are counted once per physical parking episode. Reports linked to an existing case are shown separately and never inflate violations."},
         "verified_incidents": {"total": sum(r.n for r in inc), "by_status": _group(inc, "status"), "by_classification": _group(inc, "classification")},
         "compliance": {"warned": notices, "corrected_without_fee": corrected,
                        "corrected_rate": {"numerator": corrected, "denominator": notices or None,
@@ -75,6 +86,7 @@ def dashboard(estate: str, date_from: str | None = None, date_to: str | None = N
         rows = q("""select ch.charge_class, sum(ch.amount) total, count(*) n from `tabCPCP Incident Charge` ch join `tabCPCP Violation Incident` i on i.name=ch.incident
                     where i.estate=%(e)s and ch.creation>=%(a)s and ch.creation<%(b)s group by ch.charge_class""")
         out["finance"] = {r.charge_class: {"total": str(r.total), "lines": r.n} for r in rows}
+        out["finance"]["distinct_base_penalties"] = out["finance"].get("PARKING_VIOLATION", {}).get("lines", 0)
     return out
 
 
@@ -100,6 +112,7 @@ def hotspots(estate: str, date_from: str | None = None, date_to: str | None = No
         f["status"] = status
     if zone:
         f["zone"] = zone
+    f["merged_into"] = ["is", "not set"]
     inc = frappe.get_all("CPCP Violation Incident", filters=f, fields=["name", "latitude", "longitude", "accuracy_m", "classification", "status", "verified_at", "pin_source", "zone"], limit=2000)
     af = {"estate": estate, "latitude": ["is", "set"], "submitted_at": [">=", start_dt], "state": ["not in", ["Withdrawn"]]}
     if zone:
@@ -128,7 +141,7 @@ def community_summary(estate: str) -> dict:
     authorize("aggregate_dashboards", "V", estate=estate)
     end = to_db(utcnow() - timedelta(hours=RESIDENT_DELAY_HOURS))
     start = to_db(utcnow() - timedelta(days=90))
-    rows = frappe.get_all("CPCP Violation Incident", filters={"estate": estate, "verified_at": ["between", [start, end]]}, fields=["zone"], limit=5000)
+    rows = frappe.get_all("CPCP Violation Incident", filters={"estate": estate, "verified_at": ["between", [start, end]], "merged_into": ["is", "not set"]}, fields=["zone"], limit=5000)
     names = {z.name: z.zone_name for z in frappe.get_all("CPCP Zone", filters={"estate": estate}, fields=["name", "zone_name"])}
     counts = geo.zone_counts_with_threshold([r.zone or "unzoned" for r in rows], K_THRESHOLD)
     return {"window_days": 90, "delay_hours": RESIDENT_DELAY_HOURS, "min_cell_size": K_THRESHOLD,

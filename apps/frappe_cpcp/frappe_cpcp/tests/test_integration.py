@@ -11,6 +11,7 @@ from frappe.tests.utils import FrappeTestCase
 
 from frappe_cpcp import setup
 from frappe_cpcp.api import allegations as alg_api
+from frappe_cpcp.api import incidents as inc_api
 from frappe_cpcp.api import registry, session, visitors
 from frappe_cpcp.core import allegations as al
 from frappe_cpcp.core.authz import Role
@@ -34,6 +35,13 @@ class TestCPCP(FrappeTestCase):
         cls.seed = setup.seed_demo("a")
         cls.estate = next(iter(cls.seed["estates"].values()))["name"]
         cls.gate = next(iter(cls.seed["estates"].values()))["gate"]
+        frappe.db.set_single_value("CPCP Settings", "allegation_rate_limit_per_hour", 100000)  # the limiter is covered by its own behaviour; tests file many reports
+
+    @classmethod
+    def tearDownClass(cls):
+        frappe.set_user("Administrator")
+        frappe.db.set_single_value("CPCP Settings", "allegation_rate_limit_per_hour", 10)
+        super().tearDownClass()
 
     def tearDown(self):
         frappe.set_user("Administrator")
@@ -45,8 +53,7 @@ class TestCPCP(FrappeTestCase):
         s.clamping_enabled = 1
         s.legal_approval_reference = ""
         with self.assertRaises(frappe.ValidationError):
-            s.save()
-        frappe.db.rollback()
+            s.save()  # validation fails before anything is written, so no rollback (it would discard the class fixture)
 
     # ---- AC-36 / AC-14: resident cannot touch registries -----------------------------------
     def test_resident_cannot_access_registry_or_visitor_log(self):
@@ -243,14 +250,14 @@ class TestCPCP(FrappeTestCase):
         self.assertEqual(inc.verified_by, f"officer@{DOM}")
         self.assertEqual(frappe.db.get_value("CPCP Parking Allegation", r["reference"], "narrative"), before_narrative)
         self.assertEqual(frappe.db.get_value("CPCP Parking Allegation", r["reference"], "state"), al.State.VERIFIED.value)
-        # a second allegation about the same plate joins the SAME incident (no duplicate penalty path)
+        # a second report about the same vehicle ATTACHES to the existing case: no new claimable work item, no new incident
         r2 = self._report(plate="RC7777")
-        wi2 = frappe.get_all("CPCP Security Work Item", filters={"allegation": r2["reference"]}, pluck="name")[0]
+        self.assertFalse(frappe.get_all("CPCP Security Work Item", filters={"allegation": r2["reference"]}))
+        self.assertEqual(frappe.db.get_value("CPCP Violation Incident", v["incident"], "allegation_count"), 2)
         as_user("officer")
-        alg_api.claim_work_item(wi2)
-        v2 = alg_api.verify_and_create_violation(r2["reference"], "RC7777", "feedbeef", 5.605, -0.185, 8)
-        self.assertFalse(v2["created"])
-        self.assertEqual(v2["incident"], v["incident"])
+        res = inc_api.review_candidate(v["incident"], r2["reference"], "link", "same car, same gate")
+        self.assertEqual(res["reports_in_case"], 2)
+        self.assertEqual(frappe.db.count("CPCP Violation Incident", {"plate_normalized": "RC7777"}), 1)
 
     def test_reject_outcome_requires_reason_and_creates_nothing(self):
         r = self._report(plate="NS1111")

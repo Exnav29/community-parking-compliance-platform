@@ -14,11 +14,10 @@ accounting and appeals. **The goal is voluntary compliance and safe access, not 
 
 | Area | State |
 |---|---|
-| Domain core (authorization matrix, visitor sessions, notice clock, charge engine, allegation triage, audit chain, geo) | Implemented, unit-tested (`apps/frappe_cpcp/frappe_cpcp/core`) |
-| Frappe app: 24 DocTypes, permission hooks, protected registry/visitor/allegation APIs | Implemented; **Frappe integration tests not yet run** (dev stack is being brought up) |
-| Isolated Frappe site per organization (dev, 2 sites) | In progress |
-| Mobile app (React + Capacitor) | Not started (Phase 0 proof of concept pending) |
-| Desktop web console, maps/heatmap, finance, appeals | Not started |
+| Domain core, 31-DocType Frappe app, incident lifecycle (PRD v1.7), communications, gated enforcement, reports | Implemented and verified; see [docs/STATUS.md](docs/STATUS.md) |
+| Mobile app (React + Capacitor) | Implemented; awaiting physical-device validation |
+| Isolated Frappe site per organization (dev: 2 sites), cross-tenant isolation | Verified over HTTP |
+| Desktop management console, map/finance screens | Not started |
 
 See [docs/STATUS.md](docs/STATUS.md) for verified results and blockers, and
 [docs/spec/PRD_v1.7.md](docs/spec/PRD_v1.7.md) for the specification.

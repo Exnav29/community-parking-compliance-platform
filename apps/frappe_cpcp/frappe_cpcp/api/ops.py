@@ -2,6 +2,7 @@
 """Operational read APIs for the mobile and desktop clients: estate context, active cases, incident detail."""
 import frappe
 
+from frappe_cpcp.core import episodes as ep
 from frappe_cpcp.permissions import authorize, get_actor
 from frappe_cpcp.services.common import iso
 
@@ -36,13 +37,18 @@ def active_cases(estate: str) -> list[dict]:
         authorize("verify_incident", "C", estate=estate)  # officers: duty access in their own estate
     else:
         authorize("incident_reports", "R", estate=estate)
-    rows = frappe.get_all("CPCP Violation Incident", filters={"estate": estate, "status": ["not in", list(CLOSED)]},
-                          fields=["name", "plate_snapshot", "status", "classification", "verified_by", "verified_at", "responsible_unit"],
+    rows = frappe.get_all("CPCP Violation Incident", filters={"estate": estate, "status": ["not in", list(CLOSED)], "merged_into": ["is", "not set"],
+                                                              "episode_status": ["!=", "Resolved/Closed"]},
+                          fields=["name", "plate_snapshot", "status", "classification", "verified_by", "verified_at", "responsible_unit",
+                                  "episode_status", "allegation_count", "priority", "assigned_officer"],
                           order_by="verified_at desc", limit=100)
     out = []
     for r in rows:
         n = frappe.db.get_value("CPCP Warning Notice", {"incident": r.name}, ["deadline", "effective_at"], as_dict=True)
         out.append({"incident": r.name, "plate": r.plate_snapshot, "status": r.status, "classification": r.classification,
+                    "episode_status": r.episode_status, "reports": r.allegation_count, "priority": r.priority,
+                    "already_being_handled": ep.already_being_handled(ep.Episode(r.episode_status)),
+                    "assigned_officer": r.assigned_officer,
                     "verified_at": iso(r.verified_at), "notice_deadline": iso(n.deadline) if n else None,
                     "notice_effective_at": iso(n.effective_at) if n else None,
                     "attempts": frappe.db.count("CPCP Communication Attempt", {"incident": r.name})})
@@ -53,7 +59,8 @@ def active_cases(estate: str) -> list[dict]:
 def incident_detail(incident: str) -> dict:
     row = frappe.db.get_value("CPCP Violation Incident", incident,
                               ["name", "estate", "plate_snapshot", "status", "classification", "rule_version", "latitude", "longitude",
-                               "accuracy_m", "pin_source", "pin_correction_reason", "verified_by", "verified_at", "zone"], as_dict=True)
+                               "accuracy_m", "pin_source", "pin_correction_reason", "verified_by", "verified_at", "zone", "episode_status",
+                               "allegation_count", "priority", "assigned_officer", "first_observed_at", "last_observed_at", "end_evidence"], as_dict=True)
     if not row:
         raise frappe.PermissionError("not permitted")
     authorize("verify_incident" if get_actor().role.value == "security_officer" else "incident_reports",
@@ -61,7 +68,11 @@ def incident_detail(incident: str) -> dict:
     allegations = frappe.get_all("CPCP Incident Allegation Link", filters={"parent": incident}, pluck="allegation")
     return {**{k: row[k] for k in ("name", "plate_snapshot", "status", "classification", "rule_version", "pin_source",
                                     "pin_correction_reason", "verified_by")},
-            "verified_at": iso(row.verified_at), "location": {"lat": row.latitude, "lon": row.longitude, "accuracy_m": row.accuracy_m,
+            "verified_at": iso(row.verified_at), "episode_status": row.episode_status, "reports": row.allegation_count, "priority": row.priority,
+            "assigned_officer": row.assigned_officer, "first_observed_at": iso(row.first_observed_at), "last_observed_at": iso(row.last_observed_at),
+            "end_evidence": row.end_evidence,
+            "already_being_handled": ep.already_being_handled(ep.Episode(row.episode_status)),
+            "location": {"lat": row.latitude, "lon": row.longitude, "accuracy_m": row.accuracy_m,
                                                               "note": "Officer-confirmed vehicle pin; accuracy is the device reading"},
             "source_allegations": allegations,
             "evidence_count": frappe.db.count("CPCP Officer Evidence", {"incident": incident})}

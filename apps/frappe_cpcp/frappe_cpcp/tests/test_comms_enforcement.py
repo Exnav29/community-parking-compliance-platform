@@ -11,6 +11,9 @@ from frappe_cpcp import setup
 from frappe_cpcp.api import allegations as alg
 from frappe_cpcp.api import communications as com
 from frappe_cpcp.api import enforcement as enf
+from frappe_cpcp.api import incidents as inc_api
+from frappe_cpcp.core import episodes as ep
+from frappe_cpcp.core.plates import normalize_plate
 from frappe_cpcp.core import comms as cm
 from frappe_cpcp.services.common import to_db, utcnow
 
@@ -50,7 +53,16 @@ class TestCommsEnforcement(FrappeTestCase):
         s.flags.ignore_permissions = True
         s.save()
 
+    def _end_existing_episode(self, plate):
+        """One vehicle == one live episode (PRD 60). Fixtures end the previous one with a documented manager determination."""
+        frappe.set_user("Administrator")
+        row = frappe.db.get_value("CPCP Violation Incident", {"active_key": ep.active_key(self.estate, normalize_plate(plate))}, "name")
+        if row:
+            as_user("secmgr")
+            inc_api.end_episode(row, "manager_determination", "test fixture: previous episode ended")
+
     def _incident(self, classification="Ordinary", plate="ZZ1001-26") -> str:
+        self._end_existing_episode(plate)
         as_user("resident")
         r = alg.submit_identified(self.estate, "Unsafe parking", "test", str(uuid.uuid4()), plate_text=f"T{uuid.uuid4().hex[:6]}")
         wi = frappe.get_all("CPCP Security Work Item", filters={"allegation": r["reference"]}, pluck="name")[0]

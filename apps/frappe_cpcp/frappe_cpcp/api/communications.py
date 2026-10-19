@@ -16,7 +16,7 @@ from frappe_cpcp.core import noticeclock as nc
 from frappe_cpcp.core.phones import mask_phone
 from frappe_cpcp.permissions import authorize
 from frappe_cpcp.services.audit import log_audit, log_sensitive_access
-from frappe_cpcp.services.common import iso, require, to_db, utcnow
+from frappe_cpcp.services.common import deadlock_retry, iso, require, to_db, utcnow
 
 DEFAULT_SMS_TEMPLATE = ("Community Security: Vehicle {plate} is parked in a restricted area at {zone}. Please move it "
                         "immediately. For assistance call {security_number}. Case {case_id}. Enforcement may follow under "
@@ -104,6 +104,7 @@ def _attempt_view(a) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def initiate_call(incident: str, contact_id: str, client_uuid: str) -> dict:
     """Mode A (native dialer). Records that a call was REQUESTED; says nothing about connection."""
     require(client_uuid, "client_uuid")
@@ -136,6 +137,7 @@ def _event(attempt: str, etype: str, provider_ts: str, key: str | None = None, s
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def record_call_outcome(attempt: str, outcome: str, warning_confirmed: int = 0, estimated_seconds: int | None = None) -> dict:
     a = frappe.get_doc("CPCP Communication Attempt", attempt)
     inc = _incident(a.incident)
@@ -167,6 +169,7 @@ def record_call_outcome(attempt: str, outcome: str, warning_confirmed: int = 0, 
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def establish_notice_clock(incident: str, attempt: str) -> dict:
     """Server-authoritative. The device clock and any attempt that is not a confirmed notice cannot start it."""
     inc = _incident(incident)
@@ -192,6 +195,8 @@ def establish_notice_clock(incident: str, attempt: str) -> dict:
                           "grace_minutes": n.grace_minutes, "deadline": to_db(n.deadline), "attempt": attempt,
                           "established_by": actor.user}).insert(ignore_permissions=True)
     frappe.db.set_value("CPCP Violation Incident", incident, "status", "grace_active", update_modified=False)
+    from frappe_cpcp.services import episodes as svc
+    svc.apply_event(incident, "notice_established")
     frappe.db.set_value("CPCP Communication Attempt", attempt, "notice", doc.name, update_modified=False)
     log_audit(action="notice_clock_established", entity="CPCP Warning Notice", entity_id=doc.name, role=actor.role.value,
               detail={"deadline": iso(doc.deadline), "proof": n.proof_basis.value})
@@ -199,6 +204,7 @@ def establish_notice_clock(incident: str, attempt: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def send_case_sms(incident: str, contact_id: str, client_uuid: str) -> dict:
     require(client_uuid, "client_uuid")
     inc = _incident(incident)
@@ -255,11 +261,13 @@ def ingest_callback(body: bytes, signature: str | None) -> dict:
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@deadlock_retry
 def provider_callback() -> dict:
     return ingest_callback(frappe.request.get_data(), frappe.get_request_header("X-CPCP-Signature"))
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def acknowledge_sms(attempt: str, note: str) -> dict:
     """Explicit acknowledgement (e.g. the recipient replied or called back), recorded by an officer with a note."""
     a = frappe.get_doc("CPCP Communication Attempt", attempt)

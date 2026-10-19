@@ -5,7 +5,13 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "allegation"
+  "allegation",
+  "link_state",
+  "join_reason",
+  "matcher_confidence",
+  "linked_by",
+  "linked_at",
+  "link_key"
  ],
  "fields": [
   {
@@ -15,6 +21,42 @@
    "options": "CPCP Parking Allegation",
    "reqd": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "link_state",
+   "fieldtype": "Select",
+   "label": "Link State",
+   "options": "Confirmed\nAuto Candidate\nRejected\nLate\nMerged from\nSplit out",
+   "default": "Confirmed",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "join_reason",
+   "fieldtype": "Data",
+   "label": "Join Reason"
+  },
+  {
+   "fieldname": "matcher_confidence",
+   "fieldtype": "Float",
+   "label": "Matcher Confidence"
+  },
+  {
+   "fieldname": "linked_by",
+   "fieldtype": "Link",
+   "label": "Linked By",
+   "options": "User"
+  },
+  {
+   "fieldname": "linked_at",
+   "fieldtype": "Datetime",
+   "label": "Linked At"
+  },
+  {
+   "fieldname": "link_key",
+   "fieldtype": "Data",
+   "label": "Link Key",
+   "unique": 1,
+   "description": "incident:allegation, prevents duplicate links"
   }
  ],
  "index_web_pages_for_search": 0,

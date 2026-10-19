@@ -17,7 +17,8 @@
   "reason",
   "provider_ref",
   "yard_arrival_at",
-  "release_at"
+  "release_at",
+  "active_key"
  ],
  "fields": [
   {
@@ -98,6 +99,13 @@
    "fieldname": "release_at",
    "fieldtype": "Datetime",
    "label": "Release At"
+  },
+  {
+   "fieldname": "active_key",
+   "fieldtype": "Data",
+   "label": "Active Key",
+   "unique": 1,
+   "description": "incident:type while the action is live; at most one live clamp/tow per episode"
   }
  ],
  "index_web_pages_for_search": 0,

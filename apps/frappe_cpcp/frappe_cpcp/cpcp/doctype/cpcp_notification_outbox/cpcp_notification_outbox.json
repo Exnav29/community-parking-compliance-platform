@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "work_item",
+  "incident",
   "recipient_role",
   "recipient_user",
   "channel",
@@ -19,8 +20,13 @@
    "fieldname": "work_item",
    "fieldtype": "Link",
    "label": "Work Item",
-   "options": "CPCP Security Work Item",
-   "reqd": 1
+   "options": "CPCP Security Work Item"
+  },
+  {
+   "fieldname": "incident",
+   "fieldtype": "Link",
+   "label": "Incident",
+   "options": "CPCP Violation Incident"
   },
   {
    "fieldname": "recipient_role",

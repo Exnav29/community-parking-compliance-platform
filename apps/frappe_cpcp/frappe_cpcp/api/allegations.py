@@ -16,14 +16,13 @@ from frappe_cpcp.core import allegations as al
 from frappe_cpcp.core import geo
 from frappe_cpcp.core.plates import normalize_plate
 from frappe_cpcp.permissions import authorize, get_actor
+from frappe_cpcp.services import episodes as svc
 from frappe_cpcp.services.audit import log_audit, log_sensitive_access
-from frappe_cpcp.services.common import active_policy, age_minutes, iso, require, to_db, utcnow
+from frappe_cpcp.services.common import deadlock_retry, active_policy, age_minutes, iso, require, to_db, utcnow
 
-ACK_TARGET_MINUTES = 10  # estate-configurable later; escalation job reads this
 CATEGORIES = ["Gate or driveway blocked", "Roadway obstruction", "Unsafe parking", "Unauthorized space",
               "Emergency access", "Other"]
 ANON_ESTATE_HOURLY_CAP = 30
-DEDUP_WINDOW_HOURS = 4
 
 
 # ---------------------------------------------------------------- intake ----------------------------------------
@@ -54,60 +53,22 @@ def _plate_hash(plate_text: str | None) -> str | None:
         return None
 
 
-def _dedup_cluster(estate: str, plate_hash: str | None) -> str:
-    """Join an open recent allegation about the same plate, else start a new cluster. Reveals no reporter data."""
-    if plate_hash:
-        cutoff = to_db(utcnow()) - timedelta(hours=DEDUP_WINDOW_HOURS)
-        hit = frappe.db.sql(
-            """select dedup_cluster from `tabCPCP Parking Allegation`
-               where estate=%s and state not in ('Closed','Withdrawn') and dedup_cluster is not null
-                 and alleged_plate_hash = %s and submitted_at >= %s order by submitted_at desc limit 1""",
-            (estate, plate_hash, cutoff))
-        if hit:
-            return hit[0][0]
-    return "CL-" + uuid.uuid4().hex[:12]
-
-
 def _create_allegation(*, estate, mode, category, narrative, plate_text, lat, lon, accuracy, source, zone, urgent,
-                       client_uuid, reporter_user=None, reporter_unit=None, receipt_id=None) -> "frappe.model.document.Document":
+                       client_uuid, reporter_user=None, reporter_unit=None, receipt_id=None):
+    """Insert the immutable intake record, then route it. Returns (doc, routing) or (None, None) when the client
+    operation (client_uuid) was already stored by a concurrent identical request."""
     doc = frappe.get_doc({
         "doctype": "CPCP Parking Allegation", "estate": estate, "mode": mode, "category": category, "narrative": narrative,
         "alleged_plate_text": (plate_text or "").strip().upper() or None, "latitude": lat, "longitude": lon,
         "accuracy_m": accuracy, "location_source": source, "zone": zone, "urgent_claim": 1 if urgent else 0,
         "state": al.State.SUBMITTED.value, "alleged_plate_hash": _plate_hash(plate_text),
-        "dedup_cluster": _dedup_cluster(estate, _plate_hash(plate_text)), "receipt_id": receipt_id,
-        "client_uuid": client_uuid, "submitted_at": to_db(utcnow()), "reporter_user": reporter_user, "reporter_unit": reporter_unit,
-    }).insert(ignore_permissions=True)
-    _route_to_security(doc)
-    return doc
-
-
-def _route_to_security(alg) -> None:
-    """Atomically (same transaction) create the work item and a durable outbox row per recipient.
-    A failed push can never lose the work item: delivery is a separate, retried concern."""
-    now = utcnow()
-    wi = frappe.get_doc({
-        "doctype": "CPCP Security Work Item", "allegation": alg.name, "estate": alg.estate,
-        "urgency": "Urgent claimed" if alg.urgent_claim else "Normal", "status": "Open",
-        "due_at": to_db(now + timedelta(minutes=ACK_TARGET_MINUTES)),
-    }).insert(ignore_permissions=True)
-    recipients = frappe.get_all(
-        "CPCP Role Assignment", filters={"status": "Active", "estate": alg.estate, "cpcp_role": ["in", ["security_officer", "security_manager"]]},
-        fields=["user", "cpcp_role"])
-    for r in {(x.user, x.cpcp_role) for x in recipients}:
-        frappe.get_doc({
-            "doctype": "CPCP Notification Outbox", "work_item": wi.name, "recipient_user": r[0], "recipient_role": r[1],
-            "channel": "in_app", "status": "Pending", "idempotency_key": f"{wi.name}:{r[0]}:in_app",
-            "payload_minimal": frappe.as_json({"kind": "resident_report", "work_item": wi.name, "category": alg.category,
-                                               "urgent": bool(alg.urgent_claim)}),  # no reporter, plate, photo, address
-        }).insert(ignore_permissions=True)
-    _review_event(alg.name, "Received", actor=None, from_state=al.State.SUBMITTED.value, to_state=al.State.RECEIVED.value)
-    frappe.db.set_value("CPCP Parking Allegation", alg.name, "state", al.State.RECEIVED.value, update_modified=False)
-
-
-def _review_event(allegation, event, actor, from_state="", to_state="", reason=None):
-    frappe.get_doc({"doctype": "CPCP Allegation Review Event", "allegation": allegation, "event": event, "actor": actor,
-                    "from_state": from_state, "to_state": to_state, "reason": reason}).insert(ignore_permissions=True)
+        "receipt_id": receipt_id, "client_uuid": client_uuid, "submitted_at": to_db(utcnow()),
+        "reporter_user": reporter_user, "reporter_unit": reporter_unit,
+    })
+    if not svc._try_insert(doc):
+        return None, None
+    routing = svc.route_allegation(doc.as_dict())
+    return doc, routing
 
 
 def _check_rate(user: str) -> None:
@@ -120,6 +81,7 @@ def _check_rate(user: str) -> None:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def submit_identified(estate: str, category: str, narrative: str, client_uuid: str, plate_text: str | None = None,
                       latitude=None, longitude=None, accuracy_m=None, location_source: str | None = None,
                       zone: str | None = None, urgent: int = 0) -> dict:
@@ -134,9 +96,12 @@ def submit_identified(estate: str, category: str, narrative: str, client_uuid: s
     _check_rate(actor.user)
     narrative, lat, lon, acc, src = _validate_common(estate, category, narrative, latitude, longitude, accuracy_m, location_source)
     unit = next(iter(actor.unit_ids), None) if actor.role.value == "resident" else None
-    doc = _create_allegation(estate=estate, mode="Identified", category=category, narrative=narrative, plate_text=plate_text,
-                             lat=lat, lon=lon, accuracy=acc, source=src, zone=zone, urgent=cint(urgent), client_uuid=client_uuid,
-                             reporter_user=actor.user, reporter_unit=unit)
+    doc, _routing = _create_allegation(estate=estate, mode="Identified", category=category, narrative=narrative, plate_text=plate_text,
+                                       lat=lat, lon=lon, accuracy=acc, source=src, zone=zone, urgent=cint(urgent), client_uuid=client_uuid,
+                                       reporter_user=actor.user, reporter_unit=unit)
+    if doc is None:  # the same client operation arrived twice at once: first writer wins, this one is a replay
+        prior = frappe.db.sql("select name from `tabCPCP Parking Allegation` where client_uuid=%s for update", (client_uuid,))
+        return {"replayed": True, "reference": prior[0][0] if prior else None}
     log_audit(action="allegation_submitted", entity="CPCP Parking Allegation", entity_id=doc.name, role=actor.role.value,
               detail={"mode": "Identified"})
     return {"replayed": False, "reference": doc.name, "status": al.reporter_status(al.State.RECEIVED),
@@ -151,6 +116,7 @@ def _cache_counter(key: str, ttl: int) -> int:
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@deadlock_retry
 def submit_anonymous(estate: str, community_code: str, category: str, narrative: str, plate_text: str | None = None,
                      latitude=None, longitude=None, accuracy_m=None, location_source: str | None = None,
                      zone: str | None = None, urgent: int = 0, client_uuid: str | None = None) -> dict:
@@ -178,9 +144,11 @@ def submit_anonymous(estate: str, community_code: str, category: str, narrative:
     if prior:
         return {"replayed": True, "note": "Already received. The one-time secret cannot be shown again."}
     receipt = al.new_receipt()
-    doc = _create_allegation(estate=estate, mode="Anonymous", category=category, narrative=narrative, plate_text=plate_text,
-                             lat=lat, lon=lon, accuracy=acc, source=src, zone=zone, urgent=cint(urgent), client_uuid=cu,
-                             receipt_id=receipt.receipt_id)
+    doc, _routing = _create_allegation(estate=estate, mode="Anonymous", category=category, narrative=narrative, plate_text=plate_text,
+                                       lat=lat, lon=lon, accuracy=acc, source=src, zone=zone, urgent=cint(urgent), client_uuid=cu,
+                                       receipt_id=receipt.receipt_id)
+    if doc is None:
+        return {"replayed": True, "note": "Already received. The one-time secret cannot be shown again."}
     al.assert_anonymous_clean(doc.as_dict())
     frappe.get_doc({"doctype": "CPCP Allegation Receipt", "receipt_id": receipt.receipt_id, "allegation": doc.name,
                     "salt": receipt.salt, "verifier": receipt.verifier}).insert(ignore_permissions=True)
@@ -191,6 +159,7 @@ def submit_anonymous(estate: str, community_code: str, category: str, narrative:
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@deadlock_retry
 def anonymous_status(receipt_id: str, secret: str) -> dict:
     """Pull-only generic status. Wrong secret and unknown receipt are indistinguishable."""
     if _cache_counter(f"cpcp:anonstatus:{utcnow():%Y%m%d%H%M}", 120) > 120:
@@ -218,54 +187,85 @@ def my_reports() -> list[dict]:
 # ---------------------------------------------------------------- triage ----------------------------------------
 
 def _wi(work_item: str):
-    row = frappe.db.get_value("CPCP Security Work Item", work_item, ["name", "allegation", "estate", "claimed_by", "status"], as_dict=True)
+    row = frappe.db.get_value("CPCP Security Work Item", work_item, ["name", "allegation", "estate", "claimed_by", "status", "incident"], as_dict=True)
     if not row:
         raise frappe.PermissionError("not permitted")
     return row
 
 
+def _assignee_for(allegation: str) -> str | None:
+    """Who is responsible for an allegation: the work-item claimant, else the incident's assigned officer."""
+    wi = svc.work_item_for_allegation(allegation)
+    if wi:
+        return frappe.db.get_value("CPCP Security Work Item", wi, "claimed_by") or None
+    rows = frappe.db.sql("select parent from `tabCPCP Incident Allegation Link` where allegation=%s limit 1", (allegation,))
+    return frappe.db.get_value("CPCP Violation Incident", rows[0][0], "assigned_officer") if rows else None
+
+
 @frappe.whitelist()
 def triage_queue(estate: str) -> list[dict]:
-    """Estate-scoped queue with a coarse, privacy-safe projection. No reporter fields, plates or photos."""
+    """One consolidated row per actionable case ("3 independent reports"). Coarse, privacy-safe projection."""
     actor = authorize("triage_reports", "R", estate=estate)
     rows = frappe.get_all("CPCP Security Work Item", filters={"estate": estate, "status": ["in", ["Open", "Claimed", "Escalated"]]},
-                          fields=["name", "allegation", "urgency", "status", "claimed_by", "creation", "acknowledged_at"], order_by="creation asc")
+                          fields=["name", "allegation", "urgency", "status", "claimed_by", "creation", "allegation_count", "latest_at",
+                                  "review_needed", "review_note", "candidate_incident", "lease_expires_at"], order_by="creation asc")
+    now = utcnow()
     out = []
     for r in rows:
-        mine_or_free = actor.role.value in ("org_admin", "estate_manager", "security_manager") or r.claimed_by in (None, "", actor.user)
-        if not mine_or_free:
+        lease_ok = bool(r.claimed_by) and r.lease_expires_at is not None and svc_from_db(r.lease_expires_at) > now
+        if not (actor.role.value in ("org_admin", "estate_manager", "security_manager") or not r.claimed_by or not lease_ok or r.claimed_by == actor.user):
             continue
         a = frappe.db.get_value("CPCP Parking Allegation", r.allegation, ["category", "state", "mode", "zone", "latitude", "longitude"], as_dict=True)
         coarse = frappe.db.get_value("CPCP Zone", a.zone, "zone_name") if a.zone else (
             f"{round(a.latitude, 3)}, {round(a.longitude, 3)}" if a.latitude is not None else "location not provided")
+        handled = False
+        if r.candidate_incident:
+            handled = svc.ep.already_being_handled(svc.incident_state(r.candidate_incident))
         out.append({"work_item": r.name, "allegation": r.allegation, "category": a.category, "urgency": r.urgency,
-                    "state": a.state, "age_minutes": age_minutes(r.creation), "claimed": bool(r.claimed_by),
-                    "claimed_by": r.claimed_by if r.claimed_by in (actor.user,) or actor.role.value != "security_officer" else "another officer",
-                    "coarse_location": coarse, "follow_up_available": a.mode != "Anonymous"})
+                    "state": a.state, "age_minutes": age_minutes(r.creation), "report_count": r.allegation_count or 1,
+                    "reports_label": f"{r.allegation_count or 1} independent report{'s' if (r.allegation_count or 1) != 1 else ''}",
+                    "oldest_report_at": iso(r.creation), "latest_report_at": iso(r.latest_at),
+                    "claimed": bool(r.claimed_by) and lease_ok,
+                    "claimed_by": r.claimed_by if (r.claimed_by == actor.user or actor.role.value != "security_officer") else "another officer",
+                    "coarse_location": coarse, "follow_up_available": a.mode != "Anonymous",
+                    "possible_related_case": bool(r.candidate_incident), "related_case_already_handled": handled,
+                    "needs_review": bool(r.review_needed)})
     return out
 
 
+def svc_from_db(v):
+    from frappe_cpcp.services.common import from_db
+    return from_db(v)
+
+
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def claim_work_item(work_item: str) -> dict:
-    """Atomic claim: of two simultaneous officers exactly one wins; the other gets a truthful refusal."""
+    """Atomic claim with a lease: of two simultaneous officers exactly one wins; an expired lease can be taken over."""
     wi = _wi(work_item)
     actor = authorize("triage_reports", "U", estate=wi.estate)
-    now = to_db(utcnow())
+    if wi.incident:
+        frappe.throw("This report is already part of a case", frappe.ValidationError)
+    now = utcnow()
+    lease = to_db(now + timedelta(hours=svc._lease_hours()))
     frappe.db.sql(
-        """update `tabCPCP Security Work Item` set claimed_by=%s, claimed_at=%s, acknowledged_at=%s, status='Claimed'
-           where name=%s and status='Open' and (claimed_by is null or claimed_by='')""",
-        (actor.user, now, now, work_item))
+        """update `tabCPCP Security Work Item` set claimed_by=%(u)s, claimed_at=%(n)s, acknowledged_at=%(n)s, lease_expires_at=%(l)s, status='Claimed'
+           where name=%(w)s and incident is null and (
+                 (status='Open' and (claimed_by is null or claimed_by=''))
+              or (status='Claimed' and claimed_by != %(u)s and lease_expires_at is not null and lease_expires_at < %(n)s))""",
+        {"u": actor.user, "n": to_db(now), "l": lease, "w": work_item})
     if frappe.db.sql("select row_count()")[0][0] != 1:
         holder = frappe.db.get_value("CPCP Security Work Item", work_item, "claimed_by")
         frappe.throw("Already claimed by another officer" if holder != actor.user else "You already hold this claim",
                      frappe.DuplicateEntryError)
-    state = al.State(frappe.db.get_value("CPCP Parking Allegation", wi.allegation, "state"))
-    new = al.transition(state, al.State.UNDER_REVIEW, actor_is_security=True)
-    frappe.db.set_value("CPCP Parking Allegation", wi.allegation, "state", new.value, update_modified=False)
-    _review_event(wi.allegation, "Claim", actor.user, state.value, new.value)
+    members = svc.members_of(work_item, wi.allegation)
+    for m in members:
+        cur = al.State(svc.locked_get("CPCP Parking Allegation", m, ("state",))["state"])
+        if cur == al.State.RECEIVED:
+            svc.set_allegation_state(m, al.transition(cur, al.State.UNDER_REVIEW, actor_is_security=True).value, "Claim", actor.user)
     frappe.db.sql("update `tabCPCP Notification Outbox` set status='Acknowledged' where work_item=%s and recipient_user=%s", (work_item, actor.user))
     log_audit(action="work_item_claimed", entity="CPCP Security Work Item", entity_id=work_item, role=actor.role.value)
-    return {"work_item": work_item, "allegation": wi.allegation, "claimed_by": actor.user}
+    return {"work_item": work_item, "allegation": wi.allegation, "claimed_by": actor.user, "lease_expires_at": iso(lease)}
 
 
 @frappe.whitelist()
@@ -276,11 +276,12 @@ def open_allegation(allegation: str) -> dict:
                              "accuracy_m", "location_source", "urgent_claim", "state", "submitted_at"], as_dict=True)
     if not a:
         raise frappe.PermissionError("not permitted")
-    claimed_by = frappe.db.get_value("CPCP Security Work Item", {"allegation": allegation}, "claimed_by")
-    actor = authorize("triage_reports", "R", estate=a.estate, assigned_to=claimed_by or None)
+    actor = authorize("triage_reports", "R", estate=a.estate, assigned_to=_assignee_for(allegation))
     log_sensitive_access(record_type="Parking Allegation", record_id=allegation, estate=a.estate, context="open", role=actor.role.value)
+    wi = svc.work_item_for_allegation(allegation)
+    others = [m for m in (frappe.get_all("CPCP Work Item Allegation", filters={"parent": wi}, pluck="allegation") if wi else []) if m != allegation]
     return {"allegation": a.name, "label": "UNVERIFIED RESIDENT ALLEGATION", "mode": a.mode, "category": a.category,
-            "narrative": a.narrative, "alleged_plate_text": a.alleged_plate_text,
+            "narrative": a.narrative, "alleged_plate_text": a.alleged_plate_text, "work_item": wi, "other_reports_in_case": others,
             "location": {"lat": a.latitude, "lon": a.longitude, "accuracy_m": a.accuracy_m, "source": a.location_source,
                          "note": "Reporter-supplied; not verified vehicle position"},
             "urgent_claim": bool(a.urgent_claim), "state": a.state, "submitted_at": iso(a.submitted_at),
@@ -288,6 +289,7 @@ def open_allegation(allegation: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def reveal_reporter(allegation: str, reason: str) -> dict:
     """Manager-only, reasoned, logged. Anonymous reports have nothing to reveal."""
     a = frappe.db.get_value("CPCP Parking Allegation", allegation, ["estate", "mode", "reporter_user"], as_dict=True)
@@ -336,17 +338,25 @@ def _store_evidence_photo(b64: str | None, name: str | None, claimed_sha256: str
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha256: str | None, device_lat: float, device_lon: float,
                                 device_accuracy_m: float, pin_lat: float | None = None, pin_lon: float | None = None,
                                 pin_source: str = "device", pin_reason: str | None = None, geofence_override_reason: str | None = None,
                                 classification: str = "Ordinary", note: str | None = None, photo_base64: str | None = None,
                                 photo_name: str | None = None) -> dict:
-    """One guided action: officer attests independently, a NEW linked incident is created, the allegation is untouched."""
-    a = frappe.db.get_value("CPCP Parking Allegation", allegation, ["name", "estate", "state", "dedup_cluster"], as_dict=True)
+    """One guided action. The officer attests independently; the work item (all its reports) becomes ONE canonical incident,
+    or is linked to the incident that already exists for this vehicle. Allegations are never rewritten."""
+    a = frappe.db.get_value("CPCP Parking Allegation", allegation, ["name", "estate", "state"], as_dict=True)
     if not a:
         raise frappe.PermissionError("not permitted")
-    wi = frappe.db.get_value("CPCP Security Work Item", {"allegation": allegation}, ["name", "claimed_by"], as_dict=True)
     actor = authorize("verify_incident", "C", estate=a.estate)
+    wi_name = svc.work_item_for_allegation(allegation)
+    if not wi_name:
+        frappe.throw("This report is already attached to a case; review it from the case instead", frappe.ValidationError)
+    wi = svc.lock_work_item(wi_name)  # serialize with competing officers and with arriving duplicate reports
+    if wi["incident"]:
+        frappe.throw("This report is already part of a case", frappe.ValidationError)
+    lease = wi["lease_expires_at"] and svc_from_db(wi["lease_expires_at"]) > utcnow()
     pol = active_policy(a.estate)
     if not pol:
         frappe.throw("No active policy version: an administrator must activate a policy before incidents can be verified", frappe.ValidationError)
@@ -359,40 +369,28 @@ def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha25
     if not geo.valid_coordinate(float(device_lat), float(device_lon)):
         frappe.throw("Device coordinates are not valid", frappe.ValidationError)
     boundary = frappe.db.get_value("CPCP Estate", a.estate, "boundary_geojson")
+    pin = (float(pin_lat if pin_lat is not None else device_lat), float(pin_lon if pin_lon is not None else device_lon))
     if boundary:
         poly = [(c[1], c[0]) for c in frappe.parse_json(boundary)["coordinates"][0]]
-        pin = (float(pin_lat if pin_lat is not None else device_lat), float(pin_lon if pin_lon is not None else device_lon))
         if geo.geofence_status(pin, poly) != "inside" and not (geofence_override_reason or "").strip():
             frappe.throw("Location is outside the estate boundary; provide an override reason or correct the pin", frappe.ValidationError)
 
     photo_hash, photo_url = _store_evidence_photo(photo_base64, photo_name, officer_photo_sha256)
     officer_photo_sha256 = photo_hash or officer_photo_sha256
-    existing = frappe.db.sql(
-        """select i.name from `tabCPCP Violation Incident` i join `tabCPCP Incident Allegation Link` l on l.parent = i.name
-           join `tabCPCP Parking Allegation` p on p.name = l.allegation where p.dedup_cluster = %s and p.estate = %s limit 1""",
-        (a.dedup_cluster, a.estate))
     try:
-        seed = al.promote_to_incident(
-            state=al.State(a.state), officer=actor.user, officer_evidence_ids=[officer_photo_sha256 or ""] if officer_photo_sha256 else [],
-            rule_version=pol.version_label, officer_has_active_claim=bool(wi and wi.claimed_by == actor.user),
-            existing_incident_for_cluster=existing[0][0] if existing else None)
+        al.promote_to_incident(
+            state=al.State.UNDER_REVIEW if al.State(a.state) in (al.State.UNDER_REVIEW, al.State.RECEIVED) else al.State(a.state),
+            officer=actor.user, officer_evidence_ids=[officer_photo_sha256 or ""] if officer_photo_sha256 else [],
+            rule_version=pol.version_label, officer_has_active_claim=bool(wi["claimed_by"] == actor.user and lease),
+            existing_incident_for_cluster=None)
     except al.TriageError as e:
         frappe.throw(str(e), frappe.ValidationError)
 
+    incident, created = svc.promote_work_item(
+        wi_name, actor.user, plate_text=plate, norm=norm, classification=classification if classification in ("Ordinary", "Emergency") else "Ordinary",
+        pol={"version_label": pol.version_label, "name": pol.name}, location={"lat": pin[0], "lon": pin[1], "accuracy_m": float(device_accuracy_m)},
+        pin_source=pin_source, pin_reason=pin_reason or geofence_override_reason)
     now = utcnow()
-    if seed["create"]:
-        incident = frappe.get_doc({
-            "doctype": "CPCP Violation Incident", "estate": a.estate, "plate_snapshot": plate.strip().upper(), "plate_normalized": norm,
-            "classification": classification if classification in ("Ordinary", "Emergency") else "Ordinary", "status": "recorded",
-            "verified_by": actor.user, "verified_at": to_db(now), "rule_version": pol.version_label, "policy_version": pol.name,
-            "latitude": float(pin_lat if pin_lat is not None else device_lat), "longitude": float(pin_lon if pin_lon is not None else device_lon),
-            "accuracy_m": float(device_accuracy_m), "pin_source": pin_source, "pin_correction_reason": pin_reason or geofence_override_reason,
-            "allegations": [{"allegation": allegation}]}).insert(ignore_permissions=True).name
-    else:
-        incident = seed["link_existing"]
-        inc = frappe.get_doc("CPCP Violation Incident", incident)
-        inc.append("allegations", {"allegation": allegation})
-        inc.save(ignore_permissions=True)
     frappe.get_doc({
         "doctype": "CPCP Officer Evidence", "allegation": allegation, "incident": incident, "captured_by": actor.user,
         "captured_at_server": to_db(now), "sha256": officer_photo_sha256, "photo": photo_url, "latitude": float(device_lat), "longitude": float(device_lon),
@@ -403,19 +401,16 @@ def verify_and_create_violation(allegation: str, plate: str, officer_photo_sha25
         evidence = frappe.get_all("CPCP Officer Evidence", filters={"photo": photo_url}, pluck="name", limit=1)
         frappe.db.set_value("File", {"file_url": photo_url}, {"attached_to_doctype": "CPCP Officer Evidence",
                                                              "attached_to_name": evidence[0], "attached_to_field": "photo"})
-    new_state = al.transition(al.State(a.state), al.State.VERIFIED, actor_is_security=True)
-    frappe.db.set_value("CPCP Parking Allegation", allegation, "state", new_state.value, update_modified=False)
-    frappe.db.set_value("CPCP Security Work Item", wi.name, "status", "Closed", update_modified=False)
-    _review_event(allegation, "Verify", actor.user, a.state, new_state.value, reason=f"incident {incident}")
     log_audit(action="allegation_verified", entity="CPCP Violation Incident", entity_id=incident, role=actor.role.value,
-              detail={"allegation": allegation, "created": seed["create"], "policy": pol.name})
-    return {"incident": incident, "created": seed["create"], "rule_version": pol.version_label,
+              detail={"allegation": allegation, "created": created, "policy": pol.name})
+    return {"incident": incident, "created": created, "rule_version": pol.version_label,
             "financial_consequence": "none - fines, warnings and enforcement remain separately gated"}
 
 
 @frappe.whitelist(methods=["POST"])
+@deadlock_retry
 def close_allegation(allegation: str, outcome: str, reason: str) -> dict:
-    """Not Substantiated / Resolved / Duplicate. Never generates a warning, fee, clamp or tow."""
+    """Not Substantiated / Resolved / Duplicate for the whole case (all its reports). Never generates a warning, fee, clamp or tow."""
     outcomes = {"Not Substantiated": al.State.NOT_SUBSTANTIATED, "Resolved without Violation": al.State.RESOLVED,
                 "Duplicate / Merged": al.State.DUPLICATE}
     if outcome not in outcomes:
@@ -423,15 +418,19 @@ def close_allegation(allegation: str, outcome: str, reason: str) -> dict:
     a = frappe.db.get_value("CPCP Parking Allegation", allegation, ["estate", "state"], as_dict=True)
     if not a:
         raise frappe.PermissionError("not permitted")
-    wi = frappe.db.get_value("CPCP Security Work Item", {"allegation": allegation}, ["name", "claimed_by"], as_dict=True)
-    actor = authorize("triage_reports", "U", estate=a.estate, assigned_to=wi.claimed_by if wi else None)
+    wi_name = svc.work_item_for_allegation(allegation)
+    if not wi_name:
+        frappe.throw("This report is attached to a case; use the case review actions", frappe.ValidationError)
+    wi = svc.lock_work_item(wi_name)
+    actor = authorize("triage_reports", "U", estate=a.estate, assigned_to=wi["claimed_by"] or None)
+    members = svc.members_of(wi_name, allegation)
     try:
-        new = al.transition(al.State(a.state), outcomes[outcome], actor_is_security=True, reason=reason)
+        for m in members:
+            cur = al.State(svc.locked_get("CPCP Parking Allegation", m, ("state",))["state"])
+            svc.set_allegation_state(m, al.transition(cur, outcomes[outcome], actor_is_security=True, reason=reason).value,
+                                     "Dismiss" if outcome != "Duplicate / Merged" else "Duplicate", actor.user, reason)
     except al.TriageError as e:
         frappe.throw(str(e), frappe.ValidationError)
-    frappe.db.set_value("CPCP Parking Allegation", allegation, "state", new.value, update_modified=False)
-    if wi:
-        frappe.db.set_value("CPCP Security Work Item", wi.name, "status", "Closed", update_modified=False)
-    _review_event(allegation, "Dismiss" if outcome != "Duplicate / Merged" else "Duplicate", actor.user, a.state, new.value, reason)
+    frappe.db.set_value("CPCP Security Work Item", wi_name, {"status": "Closed", "cluster_key": None}, update_modified=False)
     log_audit(action="allegation_closed", entity="CPCP Parking Allegation", entity_id=allegation, reason=reason, role=actor.role.value)
-    return {"allegation": allegation, "state": new.value}
+    return {"allegation": allegation, "state": outcomes[outcome].value, "reports_closed": len(members)}

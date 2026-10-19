@@ -6,7 +6,7 @@ import { captureLocation, takePhoto, type LocationFix } from "../lib/device";
 import { accuracyTier, normalizePlate, TIER_LABEL } from "../lib/plate";
 import { uuid, type Ctx } from "../lib/types";
 
-interface QItem { work_item: string; allegation: string; category: string; urgency: string; age_minutes: number; claimed: boolean; claimed_by: string | null; coarse_location: string; follow_up_available: boolean }
+interface QItem { work_item: string; allegation: string; category: string; urgency: string; age_minutes: number; claimed: boolean; claimed_by: string | null; coarse_location: string; follow_up_available: boolean; reports_label: string; report_count: number; possible_related_case: boolean; related_case_already_handled: boolean; needs_review: boolean }
 
 export function Queue({ c }: { c: Ctx }) {
   const [items, setItems] = useState<QItem[]>([]);
@@ -22,7 +22,8 @@ export function Queue({ c }: { c: Ctx }) {
       <ul className="plain">{items.map((i) => (
         <li key={i.work_item} className="card">
           <strong>{i.category}</strong> {i.urgency !== "Normal" && <span className="badge danger">URGENT CLAIMED</span>}
-          <div>{i.coarse_location} - {i.age_minutes} min ago</div>
+          <div><span className="badge">{i.reports_label}</span> {i.coarse_location} - first report {i.age_minutes} min ago</div>
+          {i.possible_related_case && <div className="notice">Possibly the same vehicle as a case already open{i.related_case_already_handled ? " - ALREADY BEING HANDLED. Do not start a second action." : "."}</div>}
           {!i.follow_up_available && <small>Anonymous: follow-up unavailable</small>}
           {i.claimed
             ? <Big icon=">" label="Continue" hint={`Claimed by ${i.claimed_by}`} onClick={() => c.go("verify", i.allegation)} />
@@ -109,21 +110,22 @@ export function Verify({ c, allegation }: { c: Ctx; allegation: string }) {
   );
 }
 
-interface CaseRow { incident: string; plate: string; status: string; classification: string; notice_deadline: string | null; attempts: number }
+interface CaseRow { incident: string; plate: string; status: string; classification: string; notice_deadline: string | null; attempts: number; episode_status: string; reports: number; already_being_handled: boolean; priority: string }
 
 export function Cases({ c }: { c: Ctx }) {
   const [rows, setRows] = useState<CaseRow[]>([]);
   useEffect(() => { c.client.get("ops.active_cases", { estate: c.estate.estate }).then(setRows).catch(() => c.toast("Cannot load cases")); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
   return (
     <Screen title="Active Cases" onBack={() => c.go("home")}>
-      <ul className="plain">{rows.map((r) => <li key={r.incident}><Big icon="!" label={`${r.plate} - ${r.status.replace(/_/g, " ")}`}
-        hint={`${r.classification}${r.notice_deadline ? ` - deadline ${fmtTime(r.notice_deadline)}` : " - no warning clock yet"}`} onClick={() => c.go("case", r.incident)} /></li>)}</ul>
+      <ul className="plain">{rows.map((r) => <li key={r.incident}><Big icon={r.priority !== "Normal" ? "!!" : "!"} label={`${r.plate} - ${r.episode_status}`}
+        hint={`${r.reports} report${r.reports === 1 ? "" : "s"}${r.already_being_handled ? " - Already being handled" : ""}${r.notice_deadline ? ` - deadline ${fmtTime(r.notice_deadline)}` : " - no warning clock yet"}`} onClick={() => c.go("case", r.incident)} /></li>)}</ul>
       {!rows.length && <p>No active cases.</p>}
     </Screen>
   );
 }
 
 interface Contact { contact_id: string; relationship: string; first_name: string; number: string }
+interface Rep { allegation: string; link_state: string; reason: string; category: string; urgent: boolean; submitted_at: string; source: string }
 interface Tl { attempts: { attempt: string; channel: string; relationship: string; outcome: string | null; provenance: string; duration: string; sms_status: string | null; acknowledged: boolean; initiated_at: string; message_text: string | null }[]; notice: { deadline: string; effective_at: string; proof_basis: string } | null }
 
 export function Case({ c, incident }: { c: Ctx; incident: string }) {
@@ -133,8 +135,13 @@ export function Case({ c, incident }: { c: Ctx; incident: string }) {
   const [confirmed, setConfirmed] = useState(false);
   const [sms, setSms] = useState<{ text: string; recipient: string; contact: string } | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [reps, setReps] = useState<{ episode_status: string; already_being_handled: boolean; reports: Rep[] } | null>(null);
   const load = async () => {
-    try { setRes(await c.client.get("communications.resolve_violation_contacts", { incident })); setTl(await c.client.get("communications.comms_timeline", { incident })); }
+    try {
+      setRes(await c.client.get("communications.resolve_violation_contacts", { incident }));
+      setTl(await c.client.get("communications.comms_timeline", { incident }));
+      setReps(await c.client.get("incidents.incident_candidates", { incident }));
+    }
     catch { c.toast("Cannot load case"); }
   };
   useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -164,6 +171,18 @@ export function Case({ c, incident }: { c: Ctx; incident: string }) {
     try { await c.client.post("communications.send_case_sms", { incident, contact_id: sms.contact, client_uuid: uuid() }); c.toast("SMS accepted by provider. That is not delivery."); setSms(null); load(); }
     catch (e) { c.toast((e as Error).message); }
   }
+  async function review(allegation: string, action: string) {
+    const reason = prompt(action === "link" ? "Why is this the same vehicle? (required)" : "Why is this a different vehicle or event? (required)");
+    if (!reason) return;
+    try { await c.client.post("incidents.review_candidate", { incident, allegation, action, reason }); c.toast("Recorded."); load(); }
+    catch (e) { c.toast((e as Error).message); }
+  }
+  async function ended(evidence: string, label: string) {
+    const note = prompt(`${label} - describe what you saw (required)`);
+    if (!note) return;
+    try { const r = await c.client.post("incidents.end_episode", { incident, evidence, note }); c.toast(r.identity_released ? "Episode ended. A later offense will be a new case." : "Closed, but the vehicle is still treated as the same case."); c.go("cases"); }
+    catch (e) { c.toast((e as Error).message); }
+  }
   async function corrected() {
     const note = prompt("What happened? (e.g. vehicle moved at 10:42)"); if (!note) return;
     try { await c.client.post("enforcement.mark_corrected", { incident, note }); c.toast("Closed without fee."); c.go("cases"); } catch (e) { c.toast((e as Error).message); }
@@ -171,7 +190,8 @@ export function Case({ c, incident }: { c: Ctx; incident: string }) {
   const left = tl?.notice ? Math.max(0, Math.floor((new Date(tl.notice.deadline).getTime() - now) / 1000)) : null;
   return (
     <Screen title="Case" onBack={() => c.go("cases")}>
-      <p className="hint">{incident}</p>
+      <p className="hint">{incident}{reps ? ` - ${reps.episode_status} - ${reps.reports.length} report${reps.reports.length === 1 ? "" : "s"}` : ""}</p>
+      {reps?.already_being_handled && <p className="notice"><strong>Already being handled.</strong> New reports are added here. Do not start another clamp, tow or warning.</p>}
       {tl?.notice
         ? <p className="notice" role="timer">Warning clock running. Deadline <strong>{fmtTime(tl.notice.deadline)}</strong> ({left! > 0 ? `${Math.floor(left! / 60)}:${String(left! % 60).padStart(2, "0")} left` : "expired - needs manager approval for any action"})</p>
         : <p className="notice">No warning clock. An unanswered call or a sent SMS does not start it.</p>}
@@ -192,7 +212,16 @@ export function Case({ c, incident }: { c: Ctx; incident: string }) {
       <ul className="plain">{tl?.attempts.map((a) => <li key={a.attempt} className="card"><strong>{a.channel === "sms" ? "SMS" : "Call"}</strong> to {a.relationship} at {fmtTime(a.initiated_at)}
         <div>{a.channel === "sms" ? `Status: ${a.sms_status}${a.acknowledged ? " - acknowledged" : ""}` : `Outcome: ${a.outcome ?? "not recorded (dialer opened only)"}`}</div>
         <small>{a.provenance}{a.channel !== "sms" ? ` - ${a.duration}` : ""}</small></li>)}</ul>
+      {reps && reps.reports.length > 0 && <>
+        <h3>Reports in this case</h3>
+        <ul className="plain">{reps.reports.map((r) => (
+          <li key={r.allegation} className="card"><strong>{r.category}</strong> {r.urgent && <span className="badge danger">URGENT</span>} <small>{r.source} - {fmtTime(r.submitted_at)} - {r.link_state}</small>
+            {r.link_state === "Auto Candidate" && <div className="chips"><Chip onClick={() => review(r.allegation, "link")}>Same vehicle</Chip><Chip onClick={() => review(r.allegation, "not_related")}>Not related</Chip></div>}</li>))}</ul>
+      </>}
       <Big icon="OK" label="Vehicle moved - close without fee" onClick={corrected} />
+      <h3>Did the vehicle leave?</h3>
+      <p className="hint">Only seeing it leave ends this case. Paying a fee, removing a clamp or a new day does not.</p>
+      <div className="chips"><Chip onClick={() => ended("departure_verified", "I saw it leave")}>I saw it leave</Chip><Chip onClick={() => ended("resolved_without_departure", "Close without proof it left")}>Close - not sure it left</Chip></div>
       {!c.me.enforcement_gates.clamping_enabled && !c.me.enforcement_gates.towing_enabled && <small>Clamping, towing and fees are switched off for this association.</small>}
     </Screen>
   );

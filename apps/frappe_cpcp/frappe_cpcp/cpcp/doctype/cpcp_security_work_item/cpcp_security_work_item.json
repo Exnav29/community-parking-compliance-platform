@@ -7,13 +7,22 @@
  "field_order": [
   "allegation",
   "estate",
+  "cluster_key",
   "urgency",
   "status",
   "claimed_by",
   "claimed_at",
+  "lease_expires_at",
   "acknowledged_at",
   "due_at",
-  "escalated_at"
+  "escalated_at",
+  "allegation_count",
+  "latest_at",
+  "incident",
+  "candidate_incident",
+  "review_needed",
+  "review_note",
+  "allegations"
  ],
  "fields": [
   {
@@ -22,7 +31,7 @@
    "label": "Allegation",
    "options": "CPCP Parking Allegation",
    "reqd": 1,
-   "unique": 1
+   "description": "First allegation (primary)"
   },
   {
    "fieldname": "estate",
@@ -31,6 +40,13 @@
    "options": "CPCP Estate",
    "reqd": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "cluster_key",
+   "fieldtype": "Data",
+   "label": "Cluster Key",
+   "unique": 1,
+   "description": "Unique while open; empty when closed or when no reliable plate exists"
   },
   {
    "fieldname": "urgency",
@@ -61,6 +77,11 @@
    "label": "Claimed At"
   },
   {
+   "fieldname": "lease_expires_at",
+   "fieldtype": "Datetime",
+   "label": "Lease Expires At"
+  },
+  {
    "fieldname": "acknowledged_at",
    "fieldtype": "Datetime",
    "label": "Acknowledged At"
@@ -74,6 +95,46 @@
    "fieldname": "escalated_at",
    "fieldtype": "Datetime",
    "label": "Escalated At"
+  },
+  {
+   "fieldname": "allegation_count",
+   "fieldtype": "Int",
+   "label": "Allegation Count",
+   "default": "1"
+  },
+  {
+   "fieldname": "latest_at",
+   "fieldtype": "Datetime",
+   "label": "Latest At"
+  },
+  {
+   "fieldname": "incident",
+   "fieldtype": "Link",
+   "label": "Incident",
+   "options": "CPCP Violation Incident"
+  },
+  {
+   "fieldname": "candidate_incident",
+   "fieldtype": "Link",
+   "label": "Candidate Incident",
+   "options": "CPCP Violation Incident",
+   "description": "Possible related case for reviewer comparison"
+  },
+  {
+   "fieldname": "review_needed",
+   "fieldtype": "Check",
+   "label": "Review Needed"
+  },
+  {
+   "fieldname": "review_note",
+   "fieldtype": "Small Text",
+   "label": "Review Note"
+  },
+  {
+   "fieldname": "allegations",
+   "fieldtype": "Table",
+   "label": "Allegations",
+   "options": "CPCP Work Item Allegation"
   }
  ],
  "index_web_pages_for_search": 0,
@@ -143,7 +204,7 @@
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1,
- "description": "",
+ "description": "One actionable case. Many allegations may join it; only one active claim; unique open cluster per estate+plate.",
  "autoname": "format:SWI-{#####}",
  "naming_rule": "Expression (old style)"
 }

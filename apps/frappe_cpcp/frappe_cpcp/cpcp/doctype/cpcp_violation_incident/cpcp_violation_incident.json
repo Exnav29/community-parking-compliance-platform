@@ -22,6 +22,20 @@
   "zone",
   "responsible_unit",
   "match_basis",
+  "episode_status",
+  "active_key",
+  "plate_hash",
+  "allegation_count",
+  "first_observed_at",
+  "last_observed_at",
+  "ended_at",
+  "end_evidence",
+  "end_note",
+  "merged_into",
+  "priority",
+  "assigned_officer",
+  "penalty_review",
+  "penalty_review_note",
   "allegations"
  ],
  "fields": [
@@ -125,6 +139,88 @@
    "fieldname": "match_basis",
    "fieldtype": "Data",
    "label": "Match Basis"
+  },
+  {
+   "fieldname": "episode_status",
+   "fieldtype": "Select",
+   "label": "Episode Status",
+   "options": "New/Candidate\nUnder Review\nVerified/Open\nWarning Active\nCompliance Confirmed\nClamp Active\nTow Ordered\nTowed/Impounded\nRelease Pending\nResolved/Closed\nReopened for Review",
+   "default": "Verified/Open",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "active_key",
+   "fieldtype": "Data",
+   "label": "Active Key",
+   "unique": 1,
+   "description": "Unique vehicle identity while the episode has not positively ended"
+  },
+  {
+   "fieldname": "plate_hash",
+   "fieldtype": "Data",
+   "label": "Plate Hash",
+   "search_index": 1
+  },
+  {
+   "fieldname": "allegation_count",
+   "fieldtype": "Int",
+   "label": "Allegation Count",
+   "default": "1"
+  },
+  {
+   "fieldname": "first_observed_at",
+   "fieldtype": "Datetime",
+   "label": "First Observed At"
+  },
+  {
+   "fieldname": "last_observed_at",
+   "fieldtype": "Datetime",
+   "label": "Last Observed At"
+  },
+  {
+   "fieldname": "ended_at",
+   "fieldtype": "Datetime",
+   "label": "Ended At"
+  },
+  {
+   "fieldname": "end_evidence",
+   "fieldtype": "Data",
+   "label": "End Evidence"
+  },
+  {
+   "fieldname": "end_note",
+   "fieldtype": "Small Text",
+   "label": "End Note"
+  },
+  {
+   "fieldname": "merged_into",
+   "fieldtype": "Link",
+   "label": "Merged Into",
+   "options": "CPCP Violation Incident"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Normal\nUrgent claimed",
+   "default": "Normal"
+  },
+  {
+   "fieldname": "assigned_officer",
+   "fieldtype": "Link",
+   "label": "Assigned Officer",
+   "options": "User"
+  },
+  {
+   "fieldname": "penalty_review",
+   "fieldtype": "Check",
+   "label": "Penalty Review"
+  },
+  {
+   "fieldname": "penalty_review_note",
+   "fieldtype": "Small Text",
+   "label": "Penalty Review Note"
   },
   {
    "fieldname": "allegations",
