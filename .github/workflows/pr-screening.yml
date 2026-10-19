@@ -1,0 +1,77 @@
+name: PR Screening
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# PRs from forks are untrusted; never use pull_request_target or write credentials.
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check new dependencies for known vulnerabilities
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          # Third-party license obligations are still reviewed by a human.
+          license-check: true
+
+  file-safety:
+    name: file-safety
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Inspect changed file paths (without running PR code)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t paths < <(
+            gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100" --jq '.[].filename'
+          )
+          failed=0
+          for path in "${paths[@]}"; do
+            case "$path" in
+              .env.example|*/.env.example|*.sample.env|*.example.env)
+                continue ;;
+              .env|*/.env|.env.*|*/.env.*|*.pem|*.p12|*.pfx|*.jks|*.keystore|*.key|*.sqlite|*.sqlite3|*.db|*.sql.gz|*.apk|*.aab|*.ipa|*/node_modules/*|*/.venv/*)
+                echo "::error file=${path}::Potential credential, database, binary build artifact, or unreviewable dependency directory. Remove it from the PR."
+                failed=1 ;;
+            esac
+            case "$path" in
+              .github/workflows/*|.github/CODEOWNERS|.github/dependabot.yml)
+                echo "::notice file=${path}::Sensitive repository automation changed. Maintainer must inspect carefully." ;;
+            esac
+          done
+          exit "$failed"
+
+  mobile-lint:
+    name: mobile-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+        working-directory: apps/mobile
+      - name: Lint TypeScript and React
+        run: npm run lint
+        working-directory: apps/mobile
