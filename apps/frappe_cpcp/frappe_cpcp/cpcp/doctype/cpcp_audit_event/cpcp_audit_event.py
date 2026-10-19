@@ -2,5 +2,5 @@
 from frappe_cpcp.cpcp.append_only import AppendOnlyDocument
 
 
-class CpcpAuditEvent(AppendOnlyDocument):
+class CPCPAuditEvent(AppendOnlyDocument):
     pass

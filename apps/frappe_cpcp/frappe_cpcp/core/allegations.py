@@ -151,10 +151,13 @@ def check_community_code(signing_key: bytes, estate_id: str, presented: str, epo
 
 # Fields that must be absent/None on an anonymous allegation. Server-side guard used by the API and tests.
 ANON_FORBIDDEN_FIELDS = ("reporter_user", "reporter_unit", "reporter_phone", "reporter_email", "device_id",
-                         "push_token", "ip_address", "session_id", "owner", "modified_by")
+                         "push_token", "ip_address", "session_id")
+# Framework audit columns must carry the shared Guest identity, never a person.
+ANON_GUEST_ONLY_FIELDS = ("owner", "modified_by")
 
 
 def assert_anonymous_clean(record: dict) -> None:
     leaked = [f for f in ANON_FORBIDDEN_FIELDS if record.get(f)]
+    leaked += [f for f in ANON_GUEST_ONLY_FIELDS if record.get(f) not in (None, "", "Guest")]
     if leaked:
         raise TriageError(f"anonymous allegation carries correlators: {leaked}")

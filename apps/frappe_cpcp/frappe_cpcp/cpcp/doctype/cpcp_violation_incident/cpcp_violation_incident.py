@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpViolationIncident(Document):
+class CPCPViolationIncident(Document):
     pass

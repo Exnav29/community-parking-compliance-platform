@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpVisitorSession(Document):
+class CPCPVisitorSession(Document):
     pass

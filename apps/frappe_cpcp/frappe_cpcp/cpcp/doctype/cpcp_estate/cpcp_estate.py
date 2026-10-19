@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpEstate(Document):
+class CPCPEstate(Document):
     pass

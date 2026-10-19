@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpNotificationOutbox(Document):
+class CPCPNotificationOutbox(Document):
     pass

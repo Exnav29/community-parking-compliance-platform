@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpZone(Document):
+class CPCPZone(Document):
     pass

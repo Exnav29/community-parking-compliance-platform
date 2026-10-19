@@ -7,9 +7,12 @@ Updated 2026-10-19.
 - Upstream versions/licenses checked (see docs/legal/THIRD_PARTY_LICENSES.md).
 - Frappe v15.123.1 bench builds in Docker (frappe/bench image, Python 3.12).
 
+- Frappe v15.123.1 dev stack with two sites (`org-a.localhost`, `org-b.localhost`); app installs, all 24 DocTypes import.
+- **21 Frappe integration tests pass** on org-a (`bench --site org-a.localhost run-tests --app frappe_cpcp --module frappe_cpcp.tests.test_integration`): resident denied registry/visitor log (UI hooks, list, API), officer lookup minimal + logged, other-estate denial, visit lifecycle/idempotency/re-entry, anonymous intake without correlators + receipt, claim race, verify-and-create (separate incident, duplicate allegations join one incident), append-only + audit chain, expired/multi-role handling.
+- CI on GitHub passes (core tests, lint, DocType regeneration check, secret scan).
+
 ## Not yet verified (do not assume)
-- DocType import, permission hooks and APIs on a live Frappe site (site creation in progress; first attempts hit dev-environment issues, now fixed in `infra/dev/bootstrap.sh`).
-- Two-site tenant isolation tests, backup/restore proof, CI results.
+- Cross-site HTTP isolation tests (next), backup/restore proof, mobile PoC, desktop UI.
 
 ## Blockers
 - No JDK/Android SDK on the dev machine: native Android build must run in CI or after installing the SDK.

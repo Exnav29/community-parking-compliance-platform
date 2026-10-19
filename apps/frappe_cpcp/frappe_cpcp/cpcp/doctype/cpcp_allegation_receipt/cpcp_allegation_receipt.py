@@ -2,5 +2,5 @@
 from frappe_cpcp.cpcp.append_only import AppendOnlyDocument
 
 
-class CpcpAllegationReceipt(AppendOnlyDocument):
+class CPCPAllegationReceipt(AppendOnlyDocument):
     pass

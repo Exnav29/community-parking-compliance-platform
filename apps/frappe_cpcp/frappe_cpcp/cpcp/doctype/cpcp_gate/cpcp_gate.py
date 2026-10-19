@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpGate(Document):
+class CPCPGate(Document):
     pass

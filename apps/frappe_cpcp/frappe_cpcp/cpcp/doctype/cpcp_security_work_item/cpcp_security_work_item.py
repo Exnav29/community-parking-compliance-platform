@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpSecurityWorkItem(Document):
+class CPCPSecurityWorkItem(Document):
     pass

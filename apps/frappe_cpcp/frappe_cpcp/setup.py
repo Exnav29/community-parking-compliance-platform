@@ -53,7 +53,12 @@ def _user(email: str, first: str, pwd: str) -> str:
 
 
 def _assign(user, role, estate=None, unit=None, approver="Administrator", valid_until=None):
-    if frappe.db.exists("CPCP Role Assignment", {"user": user, "cpcp_role": role, "estate": estate or "", "unit": unit or ""}):
+    filters = {"user": user, "cpcp_role": role}
+    if estate:
+        filters["estate"] = estate
+    if unit:
+        filters["unit"] = unit
+    if frappe.db.exists("CPCP Role Assignment", filters):
         return
     frappe.get_doc({"doctype": "CPCP Role Assignment", "user": user, "cpcp_role": role, "estate": estate, "unit": unit,
                     "approved_by": approver, "valid_until": valid_until, "basis": "synthetic demo"}).insert(ignore_permissions=True)
@@ -82,7 +87,7 @@ def seed_demo(profile: str = "a") -> dict:
                 frappe.get_doc({"doctype": "CPCP Unit", "estate": est, "unit_label": label}).insert(ignore_permissions=True)
         out["estates"][ename] = {"name": est, "gate": gate}
     est1 = next(iter(out["estates"].values()))["name"]
-    unit1 = frappe.db.get_value("CPCP Unit", {"estate": est1}, "name")
+    unit1 = frappe.db.get_value("CPCP Unit", {"estate": est1, "unit_label": prof["estates"][0][1][0].upper()}, "name")
 
     pol_name = frappe.db.get_value("CPCP Policy Version", {"status": "Active"})
     if not pol_name:
@@ -111,9 +116,12 @@ def seed_demo(profile: str = "a") -> dict:
         frappe.get_doc({"doctype": "CPCP Unit Membership", "unit": unit1, "person": p, "membership_type": "Owner",
                         "is_primary_contact": 1, "valid_from": add_days(nowdate(), -365)}).insert(ignore_permissions=True)
     for plate, make, color in (("ZZ 1001-26", "Toyota", "Silver"), ("ZZ 1002-26", "Honda", "Black")):
-        if not frappe.db.exists("CPCP Vehicle", {"plate": plate}):
-            v = frappe.get_doc({"doctype": "CPCP Vehicle", "plate": plate, "make": make, "color": color}).insert(ignore_permissions=True)
-            frappe.get_doc({"doctype": "CPCP Vehicle Unit Association", "vehicle": v.name, "unit": unit1,
+        veh = frappe.db.get_value("CPCP Vehicle", {"plate": plate}) or frappe.get_doc(
+            {"doctype": "CPCP Vehicle", "plate": plate, "make": make, "color": color}).insert(ignore_permissions=True).name
+        if not frappe.db.exists("CPCP Vehicle Unit Association", {"vehicle": veh, "unit": unit1, "status": "Active"}):
+            for stale in frappe.get_all("CPCP Vehicle Unit Association", filters={"vehicle": veh, "status": "Active"}, pluck="name"):
+                frappe.db.set_value("CPCP Vehicle Unit Association", stale, "status", "Ended")
+            frappe.get_doc({"doctype": "CPCP Vehicle Unit Association", "vehicle": veh, "unit": unit1,
                             "verification_status": "Verified", "valid_from": add_days(nowdate(), -30)}).insert(ignore_permissions=True)
     frappe.db.commit()
     out["note"] = f"Users created with password from ${DEMO_PASSWORD_ENV} or: {pwd if not os.environ.get(DEMO_PASSWORD_ENV) else '(from env)'}"

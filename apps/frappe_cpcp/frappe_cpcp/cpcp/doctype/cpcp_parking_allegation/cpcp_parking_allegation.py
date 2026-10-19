@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpParkingAllegation(Document):
+class CPCPParkingAllegation(Document):
     pass

@@ -2,5 +2,5 @@
 from frappe_cpcp.cpcp.append_only import AppendOnlyDocument
 
 
-class CpcpOfficerEvidence(AppendOnlyDocument):
+class CPCPOfficerEvidence(AppendOnlyDocument):
     pass

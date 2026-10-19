@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class CpcpVehicleUnitAssociation(Document):
+class CPCPVehicleUnitAssociation(Document):
     pass

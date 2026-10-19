@@ -290,7 +290,7 @@ def main() -> None:
         (folder / f"{d}.json").write_text(json.dumps(build(spec), indent=1) + "\n", encoding="utf-8")
         ctrl = folder / f"{d}.py"
         if not ctrl.exists():
-            cls = "".join(p.capitalize() for p in re.split(r"[ _]", spec["name"]))
+            cls = spec["name"].replace(" ", "")  # Frappe derives the controller class from the DocType name
             ctrl.write_text(
                 "# SPDX-License-Identifier: Apache-2.0\nfrom frappe.model.document import Document\n\n\n"
                 f"class {cls}(Document):\n    pass\n", encoding="utf-8")

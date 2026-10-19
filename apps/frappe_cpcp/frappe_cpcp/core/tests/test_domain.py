@@ -273,9 +273,10 @@ def test_community_code_rotation_and_estate_binding():
 
 def test_ac57_anonymous_record_must_have_no_correlators():
     al.assert_anonymous_clean({"narrative": "blocked gate", "reporter_user": None})
-    for f in al.ANON_FORBIDDEN_FIELDS:
+    for f in al.ANON_FORBIDDEN_FIELDS + al.ANON_GUEST_ONLY_FIELDS:
         with pytest.raises(al.TriageError):
             al.assert_anonymous_clean({f: "x"})
+    al.assert_anonymous_clean({"owner": "Guest", "modified_by": "Guest"})
 
 
 # ---- audit chain (AC-17, AC-52) --------------------------------------------------------------
