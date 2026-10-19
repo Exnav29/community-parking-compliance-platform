@@ -23,7 +23,7 @@ jobs:
       - run: npm ci
       - run: npx tsc -b
       - run: npx vitest run
-      - name: Build web assets (test build: LAN HTTP allowed so a phone can reach a dev server)
+      - name: "Build web assets (test build, LAN HTTP allowed for phone testing)"
         run: npx vite build
         env:
           VITE_ALLOW_LAN_HTTP: "1"
