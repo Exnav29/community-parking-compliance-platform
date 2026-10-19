@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and community support
+    url: https://github.com/Exnav29/community-parking-compliance-platform/discussions/categories/q-a
+    about: Ask how-to questions and get help from the community.
+  - name: Ideas and design proposals
+    url: https://github.com/Exnav29/community-parking-compliance-platform/discussions/categories/ideas
+    about: Propose larger changes and discuss them before implementing.
   - name: Security vulnerability
     url: https://github.com/Exnav29/community-parking-compliance-platform/security/advisories/new
-    about: Report privately; do not open a public issue.
+    about: Report privately; do not open a public issue or discussion.
