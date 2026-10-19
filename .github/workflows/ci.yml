@@ -53,7 +53,7 @@ jobs:
           pip install pip-audit
           python3 scripts/sbom_to_requirements.py docs/legal/sbom/backend-bench-env.cdx.json > backend-req.txt
           pip-audit -r backend-req.txt --no-deps --disable-pip || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sboms
           path: docs/legal/sbom/*.json

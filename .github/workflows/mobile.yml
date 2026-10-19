@@ -35,7 +35,7 @@ jobs:
       - name: Unsigned debug APK (test artifact only; no signing keys in CI)
         run: ./gradlew assembleDebug
         working-directory: apps/mobile/android
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cpcp-debug-apk-unsigned
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
