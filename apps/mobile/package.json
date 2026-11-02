@@ -15,7 +15,7 @@
     "@aparajita/capacitor-secure-storage": "^8.0.1",
     "@capacitor/app": "^8.1.2",
     "@capacitor/camera": "^8.2.6",
-    "@capacitor/core": "^8.5.3",
+    "@capacitor/core": "^8.6.0",
     "@capacitor/geolocation": "^8.2.4",
     "@capacitor/network": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.3",
